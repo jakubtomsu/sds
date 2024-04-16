@@ -1,5 +1,7 @@
 package static_data_structures
 
+import "base:intrinsics"
+
 // Pool
 // Sparse array of items. Slots of removed items are reused later.
 // All operations are O(1).

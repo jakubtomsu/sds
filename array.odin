@@ -1,16 +1,10 @@
 package static_data_structures
 
-// based on core:container/small_array
-
 import "core:builtin"
 import "core:runtime"
 
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Static array
-//
-
+// based on core:container/small_array
 Array :: struct($N: int, $T: typeid) where N >= 0 {
     data: [N]T,
     len:  int, // (u8 when N < 255 else u64),

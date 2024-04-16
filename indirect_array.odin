@@ -9,7 +9,6 @@ package static_data_structures
 Indirect_Array :: struct($NUM: int, $INDEX, $GEN, $VAL: typeid) #align(64)
 where intrinsics.type_is_integer(INDEX) &&
     NUM > 0 &&
-    size_of(INDEX) > size_of(GEN) &&
     (1 << (size_of(INDEX) * 8) >= NUM) &&
     (size_of(GEN) == 0 || intrinsics.type_is_unsigned(GEN))
 {
@@ -21,9 +20,9 @@ where intrinsics.type_is_integer(INDEX) &&
 }
 // odinfmt: enable
 
-indirect_array_clear :: proc(a: ^$T/Indirect_Array($N, $I, $G, $V)) {
+indirect_array_clear :: proc "contextless" (a: ^$T/Indirect_Array($N, $I, $G, $V)) {
     a.len = 0
-    pool_clear(&a.pool)
+    pool_zero(&a.pool)
     intrinsics.mem_zero(&a.indexes[a], size_of(a))
 }
 

@@ -1,3 +1,4 @@
+//+private file
 package static_data_structures
 
 import "core:fmt"
