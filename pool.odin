@@ -11,7 +11,6 @@ import "base:intrinsics"
 Pool :: struct($Num: int, $Index, $Gen, $Val: typeid) #align(64)
 where intrinsics.type_is_integer(Index) &&
     Num > 0 &&
-    size_of(Index) > size_of(Gen) &&
     (1 << (size_of(Index) * 8) >= Num) &&
     (size_of(Gen) == 0 || intrinsics.type_is_unsigned(Gen))
 {

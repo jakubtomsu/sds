@@ -1,11 +1,13 @@
 package static_data_structures
 
-BIT_ARRAY_MASK :: 63
-BIT_ARRAY_SHIFT :: 6
-
+// Static array of boolean values stored as bits.
 Bit_Array :: struct($BITS: int) where N >= 0 {
     data: [(BITS + 63) / 64]u64,
 }
+
+// Assumes u64 backing type
+BIT_ARRAY_MASK :: 63
+BIT_ARRAY_SHIFT :: 6
 
 @(require_results)
 bit_array_get :: proc "contextless" (a: ^$T/Bit_Array($B), #any_int bit_index: uint) -> bool {

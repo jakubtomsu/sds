@@ -1,10 +1,10 @@
 package static_data_structures
 
 // Queue / Ring Buffer / Circular Buffer
-Queue :: struct($N: int, $V: typeid) {
-    values: [N]V,
+Queue :: struct($Num: int, $Val: typeid) {
     offset: uint,
     len:    uint,
+    values: [Num]Val,
 }
 
 queue_clear :: proc(q: ^$T/Queue($N, $V)) {
