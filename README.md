@@ -1,10 +1,5 @@
-# Static Data Sructures
+# 🧊 Static Data Sructures
 A small Odin library with useful statically allocated data structures
-
-## _Why static?_
-Odin has a good memory allocator system. But allocating data statically can still be very useful in many cases.
-- Simpler memory management
-- TODO
 
 ## Datastructures
 - `Array` - Similar to `[dynamic]T`
@@ -14,10 +9,16 @@ Odin has a good memory allocator system. But allocating data statically can stil
 - `Queue` - A simple ring-buffer based queue
 - `Bit_Array` - Array of booleans stored as single bits. This can be useful in cases where `bit_set` is too small (>128 elements).
 
+All of the datastructures follow ZII - zero is initialization. So you don't need to ever call any `_init/_make` procs.
+
 ## Handles
-TODO
+Pool and Indirect_Array use Handles to address items
 
 I recommend reading this blog post by Andre Weissflog to learn more about the benefits of Handles: [Handles are the better pointers](https://floooh.github.io/2018/06/17/handles-vs-pointers.html)
+
+
+## Contributing
+Improvements and bugfixe PRs are welcome. If you want to add a new datastructure I recommend opening an issue first.
 
 ## Drop-in include
 You can copy&paste this code into your own package to use them directly, instead of using `sds.` prefix.
@@ -102,6 +103,4 @@ bit_array_get_safe :: sds.bit_array_get_safe
 bit_array_set_safe :: sds.bit_array_set_safe
 bit_array_unset_safe :: sds.bit_array_unset_safe
 bit_array_assign_safe :: sds.bit_array_assign_safe
-}
-
 ```
