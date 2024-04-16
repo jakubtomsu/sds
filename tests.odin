@@ -7,10 +7,7 @@ import "core:testing"
 println :: fmt.println
 
 @(test)
-test_pool :: proc(t: ^testing.T) {
-    println("Hey")
-
-    {
+test_pool_a :: proc(t: ^testing.T) {
         p: Pool(1024, u32, u8, f32)
 
         h0, h0_ok := pool_append(&p, 123)
@@ -39,9 +36,11 @@ test_pool :: proc(t: ^testing.T) {
 
         h3, h3_ok := pool_append(&p, 70707)
         assert(h3_ok)
-    }
+}
 
-    {
+
+@(test)
+test_pool_b :: proc(t: ^testing.T) {
         p: Pool(1024, u16, struct {}, f64)
 
         h0, h0_ok := pool_append(&p, 123)
@@ -71,7 +70,6 @@ test_pool :: proc(t: ^testing.T) {
         h3, h3_ok := pool_append(&p, 70707)
         assert(h3_ok)
         _ = h3
-    }
 }
 
 @(test)

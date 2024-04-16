@@ -8,21 +8,21 @@ import "base:intrinsics"
 // Doesn't support iteration.
 // Index 0 is for "invalid"
 // odinfmt: disable
-Pool :: struct($NUM: int, $INDEX, $GEN, $VAL: typeid) #align(64)
-where intrinsics.type_is_integer(INDEX) &&
-    NUM > 0 &&
-    size_of(INDEX) > size_of(GEN) &&
-    (1 << (size_of(INDEX) * 8) >= NUM) &&
-    (size_of(GEN) == 0 || intrinsics.type_is_unsigned(GEN))
+Pool :: struct($Num: int, $Index, $Gen, $Val: typeid) #align(64)
+where intrinsics.type_is_integer(Index) &&
+    Num > 0 &&
+    size_of(Index) > size_of(Gen) &&
+    (1 << (size_of(Index) * 8) >= Num) &&
+    (size_of(Gen) == 0 || intrinsics.type_is_unsigned(Gen))
 {
-    max_index:   INDEX,
-    first_free:  INDEX,
-    generations: [NUM]GEN,
+    max_index:   Index,
+    first_free:  Index,
+    generations: [Num]Gen,
     // zero = never assigned, invalid
-    // max(INDEX) = slot is currently used
+    // max(Index) = slot is currently used
     // other (1..<N) = used in a free list of unused slots
-    indexes:     [NUM]INDEX,
-    values:      [NUM]VAL,
+    indexes:     [Num]Index,
+    values:      [Num]Val,
 }
 // odinfmt: enable
 

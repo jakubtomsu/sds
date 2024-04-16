@@ -3,20 +3,20 @@ package static_data_structures
 // Indirect Array / Handle Map
 // Linear array which can be addressed with a handle.
 // Zero initialized is valid cleared state.
-// Set GEN to struct{} to disable generation counter checking.
+// Set Gen to struct{} to disable generation counter checking.
 // Uses a pool to remap handles into raw indexes.
 // odinfmt: disable
-Indirect_Array :: struct($NUM: int, $INDEX, $GEN, $VAL: typeid) #align(64)
-where intrinsics.type_is_integer(INDEX) &&
-    NUM > 0 &&
-    (1 << (size_of(INDEX) * 8) >= NUM) &&
-    (size_of(GEN) == 0 || intrinsics.type_is_unsigned(GEN))
+Indirect_Array :: struct($Num: int, $Index, $Gen, $Val: typeid) #align(64)
+where intrinsics.type_is_integer(Index) &&
+    Num > 0 &&
+    (1 << (size_of(Index) * 8) >= Num) &&
+    (size_of(Gen) == 0 || intrinsics.type_is_unsigned(Gen))
 {
-    len: INDEX,
-    pool: Pool(NUM, INDEX, GEN, INDEX),
-    indexes: [NUM]INDEX,
-    values: [NUM]VAL,
-    invalid_value: VAL,
+    len: Index,
+    pool: Pool(Num, Index, Gen, Index),
+    indexes: [Num]Index,
+    values: [Num]Val,
+    invalid_value: Val,
 }
 // odinfmt: enable
 
