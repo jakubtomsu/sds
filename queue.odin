@@ -1,10 +1,12 @@
-package static_data_structures
+package sds
+
+import "base:runtime"
 
 // Queue / Ring Buffer / Circular Buffer
-Queue :: struct($Num: int, $Val: typeid) {
+Queue :: struct($Num: uint, $Val: typeid) {
     offset: uint,
     len:    uint,
-    values: [Num]Val,
+    data:   [Num]Val,
 }
 
 queue_clear :: proc(q: ^$T/Queue($N, $V)) {
@@ -18,25 +20,25 @@ queue_len :: proc "contextless" (q: $T/Queue($N, $V)) -> int {
 }
 
 queue_space :: proc "contextless" (q: $T/Queue($N, $V)) -> int {
-    return N - int(q.len)
+    return N - q.len
 }
 
 @(require_results)
 queue_get :: proc(q: ^$T/Queue($N, $V), #any_int index: int) -> V {
-    return q.data[(q.offset + index) % N]
+    return q.data[(int(q.offset) + index) % int(N)]
 }
 
 @(require_results)
 queue_get_safe :: proc(q: ^$T/Queue($N, $V), #any_int index: int, loc := #caller_location) -> (V, bool) #optional_ok {
-    if index < 0 || index >= N {
+    if index < 0 || index >= int(N) {
         return {}, false
     }
-    return q.data[(q.offset + index) % N], true
+    return q.data[(int(q.offset) + index) % int(N)], true
 }
 
 @(require_results)
 queue_get_ptr :: proc(q: ^$T/Queue($N, $V), #any_int index: int) -> ^V {
-    return &q.data[(q.offset + index) % N]
+    return &q.data[(int(q.offset) + index) % int(N)]
 }
 
 @(require_results)
@@ -44,29 +46,38 @@ queue_get_ptr_safe :: proc(q: ^$T/Queue($N, $V), #any_int index: int, loc := #ca
     if index < 0 || index >= N {
         return {}, false
     }
-    return &q.data[(q.offset + index) % N], true
+    return &q.data[(int(q.offset) + index) % int(N)], true
 }
 
 queue_set :: proc(q: ^$T/Queue($N, $V), #any_int index: int, val: V) {
-    q.data[(q.offset + index) % N] = val
+    assert(index >= 0 && index < q.len)
+    q.data[(int(q.offset) + index) % int(N)] = val
 }
 
 queue_set_safe :: proc(q: ^$T/Queue($N, $V), #any_int index: int, val: V, loc := #caller_location) -> bool {
     if index < 0 || index >= N {
         return false
     }
-    q.data[(q.offset + index) % N] = val
+    q.data[(int(q.offset) + index) % int(N)] = val
     return true
 }
 
 @(require_results)
 queue_peek_front :: proc(q: ^$T/Queue($N, $V)) -> ^V {
+    assert(q.len > 0)
     return &q.data[q.offset % N]
 }
 
 @(require_results)
 queue_peek_back :: proc(q: ^$T/Queue($N, $V)) -> ^V {
+    assert(q.len > 0)
     return &q.data[(q.offset + q.len - 1) % N]
+}
+
+@(require_results)
+queue_peek_back_safe :: proc(q: ^$T/Queue($N, $V)) -> (^V, bool) {
+    if q.len <= 0 do return nil, false
+    return &q.data[(q.offset + q.len - 1) % N], true
 }
 
 // Push an element to the back of the queue
@@ -74,7 +85,7 @@ queue_push_back :: proc(q: ^$T/Queue($N, $V), value: V) -> bool {
     if q.len >= N {
         return false
     }
-    q.data[(q.offset + uint(q.len)) % N] = elem
+    q.data[(q.offset + uint(q.len)) % N] = value
     q.len += 1
     return true
 }
@@ -111,23 +122,26 @@ queue_push_front :: proc(q: ^$T/Queue($N, $V), value: V, loc := #caller_location
 
 // Pop an element from the back of the queue
 @(require_results)
-queue_pop_back_fast :: proc "contextless" (q: ^$T/Queue($N, $V)) -> V {
+queue_pop_back :: proc(q: ^$T/Queue($N, $V)) -> V {
+    assert(q.len > 0)
     q.len -= 1
     return q.data[(q.offset + q.len) % N]
 }
 
 // Safely pop an element from the back of the queue
 @(require_results)
-queue_pop_back :: proc(q: ^$T/Queue($N, $V)) -> (T, bool) #optional_ok {
+queue_pop_back_safe :: proc(q: ^$T/Queue($N, $V)) -> (V, bool) #optional_ok {
     if q.len <= 0 {
         return {}, false
     }
-    return queue_pop_back_fast(q), true
+    q.len -= 1
+    return q.data[int(q.offset + q.len) % int(N)], true
 }
 
 // Pop an element from the front of the queue
 @(require_results)
-queue_pop_front_fast :: proc "contextless" (q: ^$T/Queue($N, $V)) -> (result: V) {
+queue_pop_front :: proc "contextless" (q: ^$T/Queue($N, $V)) -> (result: V) {
+    assert(q.len > 0)
     result = q.data[q.offset]
     q.offset = (q.offset + 1) % N
     q.len -= 1
@@ -136,9 +150,12 @@ queue_pop_front_fast :: proc "contextless" (q: ^$T/Queue($N, $V)) -> (result: V)
 
 // Safely pop an element from the front of the queues
 @(require_results)
-queue_pop_front :: proc(q: ^$T/Queue($N, $V)) -> (result: V, ok: bool) #optional_ok {
+queue_pop_front_safe :: proc(q: ^$T/Queue($N, $V)) -> (result: V, ok: bool) #optional_ok {
     if q.len <= 0 {
         return {}, false
     }
-    return queue_pop_front_fast(q), true
+    result = q.data[q.offset]
+    q.offset = (q.offset + 1) % N
+    q.len -= 1
+    return result, true
 }

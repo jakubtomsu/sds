@@ -1,66 +1,62 @@
-package static_data_structures
+package sds
+
+import "base:intrinsics"
+
+// TODO: this needs updating
 
 // Indirect Array / Handle Map
 // Linear array which can be addressed with a handle.
 // Zero initialized is valid cleared state.
-// Set Gen to struct{} to disable generation counter checking.
 // Uses a pool to remap handles into raw indexes.
-// odinfmt: disable
-Indirect_Array :: struct($Num: int, $Index, $Gen, $Val: typeid) #align(64)
-where intrinsics.type_is_integer(Index) &&
-    Num > 0 &&
-    (1 << (size_of(Index) * 8) >= Num) &&
-    (size_of(Gen) == 0 || intrinsics.type_is_unsigned(Gen))
-{
-    len: Index,
-    pool: Pool(Num, Index, Gen, Index),
-    indexes: [Num]Index,
-    values: [Num]Val,
+Indirect_Array :: struct($Num: int, $Val, $Handle: typeid) #align (64) where Num > 0 && Num < int(max(Handle_Index)) {
+    len:           Handle_Index,
+    pool:          Pool(Num, Handle_Index, Handle),
+    indexes:       [Num]Handle_Index,
+    data:          [Num]Val,
     invalid_value: Val,
 }
-// odinfmt: enable
 
-indirect_array_clear :: proc "contextless" (a: ^$T/Indirect_Array($N, $I, $G, $V)) {
+indirect_array_clear :: proc "contextless" (a: ^$T/Indirect_Array($N, $V, $H)) {
     a.len = 0
     pool_zero(&a.pool)
     intrinsics.mem_zero(&a.indexes[a], size_of(a))
 }
 
 @(require_results)
-indirect_array_slice :: #force_inline proc(a: ^$T/Indirect_Array($N, $I, $G, $V)) -> []V {
-    return a.values[:a.len]
+indirect_array_slice :: #force_inline proc(a: ^$T/Indirect_Array($N, $V, $H)) -> []V {
+    return a.data[:a.len]
 }
 
 @(require_results)
-indirect_array_is_handle_used :: proc(a: $T/Indirect_Array($N, $I, $G, $V), handle: Handle(I, G)) -> bool {
+indirect_array_is_handle_used :: proc(a: $T/Indirect_Array($N, $V, $H), handle: H) -> bool {
     return pool_handle_is_used(a.pool, handle)
 }
 
 indirect_array_append :: proc(
-    a: ^$T/Indirect_Array($N, $I, $G, $V),
+    a: ^$T/Indirect_Array($N, $V, $H),
     value: V,
     loc := #caller_location,
 ) -> (
-    result: Handle(I, G),
+    result: H,
     ok: bool,
 ) #optional_ok {
     index := a.len
-    if index >= I(N) {
+    if index >= (N) {
         return {}, false
     }
 
     handle := pool_append(&a.pool, index) or_return
 
-    a.values[index] = value
-    a.indexes[index] = handle_index(handle)
+    a.data[index] = value
+    a.indexes[index] = handle.index
     a.len += 1
 
     return handle, true
 }
 
 indirect_array_remove :: proc(
-    a: ^$T/Indirect_Array($N, $I, $G, $V),
-    handle: Handle(I, G),
+    a: ^$T/Indirect_Array($N, $V, $H),
+    handle: H,
     loc := #caller_location,
 ) -> (
     removed_value: V,
@@ -77,8 +73,8 @@ indirect_array_remove :: proc(
     // Ignore when removing last value
     if uint(last_item_index) < uint(len(m.items)) {
         last_pool_index := m.items[last_item_index].index
-        // Swap item values
-        a.values[item_index] = a.values[last_item_index]
+        // Swap item data
+        a.data[item_index] = a.data[last_item_index]
         // Point to the swapped handle
         a.indexes[item_index] = last_pool_index
 
@@ -86,7 +82,7 @@ indirect_array_remove :: proc(
 
         // NOTE(jakubtomsu): do we want to run this in release mode? Adds a bit of safety for almost no cost.
         if true {
-            a.values[last_item_index] = {}
+            a.data[last_item_index] = {}
             a.indexes[last_item_index] = max(I)
         }
     }
@@ -97,8 +93,8 @@ indirect_array_remove :: proc(
 
 @(require_results)
 indirect_array_get_safe :: proc(
-    a: $T/Indirect_Array($N, $I, $G, $V),
-    handle: Handle(I, G),
+    a: $T/Indirect_Array($N, $V, $H),
+    handle: H,
     loc := #caller_location,
 ) -> (
     value: V,
@@ -110,19 +106,19 @@ indirect_array_get_safe :: proc(
         return {}, false
     }
 
-    assert(a.indexes[item_index] == handle_index(handle)) // sanity check
-    return a.values[item_index], true
+    assert(a.indexes[item_index] == handle.index) // sanity check
+    return a.data[item_index], true
 }
 
 @(require_results)
-indirect_array_get :: #force_inline proc "contextless" (a: $T/Indirect_Array($N, $I, $G, $V), handle: Handle(I, G)) -> V {
-    return a.values[pool_get(a.pool, handle)]
+indirect_array_get :: #force_inline proc "contextless" (a: $T/Indirect_Array($N, $V, $H), handle: H) -> V {
+    return a.data[pool_get(a.pool, handle)]
 }
 
 @(require_results)
 indirect_array_get_ptr_safe :: proc(
-    a: ^$T/Indirect_Array($N, $I, $G, $V),
-    handle: Handle(I, G),
+    a: ^$T/Indirect_Array($N, $V, $H),
+    handle: H,
     loc := #caller_location,
 ) -> (
     value: ^V,
@@ -134,18 +130,18 @@ indirect_array_get_ptr_safe :: proc(
         return &a.invalid_value, false
     }
 
-    assert(m.items[item_index].index == handle_index(handle))
+    assert(m.items[item_index].index == handle.index)
     return &m.items[item_index].value, true
 }
 
 @(require_results)
-indirect_array_get_ptr :: #force_inline proc "contextless" (m: $T/Indirect_Array($N, $I, $G, $V), handle: Handle(I, G)) -> V {
-    return &a.values[pool_get(a.pool, handle)]
+indirect_array_get_ptr :: #force_inline proc "contextless" (m: $T/Indirect_Array($N, $V, $H), handle: H) -> V {
+    return &a.data[pool_get(a.pool, handle)]
 }
 
 indirect_array_set_safe :: proc(
-    a: ^$T/Indirect_Array($N, $I, $G, $V),
-    handle: Handle(I, G),
+    a: ^$T/Indirect_Array($N, $V, $H),
+    handle: H,
     value: V,
     loc := #caller_location,
 ) -> (
@@ -158,12 +154,12 @@ indirect_array_set_safe :: proc(
         return {}, false
     }
 
-    assert(a.indexes[item_index] == handle_index(handle))
-    prev = a.values[item_index]
-    a.values[item_index] = value
+    assert(a.indexes[item_index] == handle.index)
+    prev = a.data[item_index]
+    a.data[item_index] = value
     return prev, true
 }
 
-indirect_array_set :: #force_inline proc "contextless" (m: ^$T/Indirect_Array($N, $I, $G, $V), handle: Handle(I, G), value: V) {
-    a.values[pool_get(a.pool, handle)] = value
+indirect_array_set :: #force_inline proc "contextless" (m: ^$T/Indirect_Array($N, $V, $H), handle: H, value: V) {
+    a.data[pool_get(a.pool, handle)] = value
 }

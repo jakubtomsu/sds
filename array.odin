@@ -1,89 +1,92 @@
-package static_data_structures
+package sds
 
-import "core:builtin"
-import "core:runtime"
+import "base:builtin"
+import "base:runtime"
 
 // Static array
 // based on core:container/small_array
+// TODO: use i32 everywhere
 Array :: struct($N: int, $T: typeid) where N >= 0 {
-    data: [N]T,
-    len:  int, // (u8 when N < 255 else u64),
+    data: [N]T `fmt:"len"`,
+    len:  int,
 }
 
-array_len :: #force_inline proc "contextless" (a: $A/Array) -> int {
-    return a.len
-}
-
-array_cap :: #force_inline proc "contextless" (a: $A/Array) -> int {
-    return builtin.len(a.data)
-}
-
+@(require_results)
 array_slice :: #force_inline proc "contextless" (a: ^$A/Array($N, $T)) -> []T {
     return a.data[:a.len]
 }
 
-array_from_slice :: proc "contextless" (a: ^$A/Array($N, $T), data: []T) {
-    a.len = copy(a.data[:], data)
-}
-
 @(require_results)
-array_in_bounds :: #force_inline proc "contextless" (a: $A/Array($N, $T), #any_int index: int) -> bool {
-    return index >= 0 && index < a.len
-}
-
-@(require_results)
-array_get :: #force_inline proc "contextless" (a: $A/Array($N, $T), #any_int index: int) -> T {
+array_get :: #force_inline proc(a: $A/Array($N, $T), #any_int index: int) -> T {
+    assert(index >= 0 && index < a.len)
     return a.data[index]
 }
 
 @(require_results)
-array_get_ptr :: #force_inline proc "contextless" (a: ^$A/Array($N, $T), #any_int index: int) -> ^T {
+array_get_ptr :: #force_inline proc(a: $A/Array($N, $T), #any_int index: int) -> ^T {
+    assert(index >= 0 && index < a.len)
     return &a.data[index]
 }
 
+array_set :: #force_inline proc(a: $A/Array($N, $T), #any_int index: int, value: T) {
+    assert(index >= 0 && index < a.len)
+    a.data[index] = value
+}
+
+array_set_safe :: proc "contextless" (a: $A/Array($N, $T), #any_int index: int, value: T) -> bool {
+    if index < 0 || index >= a.len {
+        return false
+    }
+    a.data[index] = value
+}
+
 @(require_results)
-array_get_safe :: proc "contextless" (a: $A/Array($N, $T), #any_int index: int) -> (T, bool) #no_bounds_check {
+array_get_safe :: proc "contextless" (a: $A/Array($N, $T), #any_int index: int) -> (T, bool) #optional_ok {
     if index < 0 || index >= a.len {
         return {}, false
     }
     return a.data[index], true
 }
 
-array_get_ptr_safe :: proc "contextless" (a: ^$A/Array($N, $T), #any_int index: int) -> (^T, bool) #no_bounds_check {
+array_get_ptr_safe :: proc "contextless" (a: ^$A/Array($N, $T), #any_int index: int) -> (^T, bool) #optional_ok {
     if index < 0 || index >= a.len {
         return {}, false
     }
     return &a.data[index], true
 }
 
-array_set :: proc "contextless" (a: ^$A/Array($N, $T), #any_int index: int, item: T) {
-    a.data[index] = item
+array_has_index :: #force_inline proc "contextless" (a: ^$A/Array, #any_int index: int) {
+    return index >= 0 && index < a.len
 }
 
-array_resize :: proc "contextless" (a: ^$A/Array, #any_int length: int) {
+array_resize :: #force_inline proc "contextless" (a: ^$A/Array, #any_int length: int) {
     a.len = clamp(length, 0, builtin.len(a.data))
 }
 
-
-array_push_back :: proc "contextless" (a: ^$A/Array($N, $T), item: T) -> bool {
-    if a.len < N {
-        a.data[a.len] = item
-        a.len += 1
-        return true
-    }
-    return false
+array_append :: proc(a: ^$A/Array($N, $T), item: T, loc := #caller_location) -> int {
+    assert(a.len < N, "Reached the array size limit", loc)
+    index := a.len
+    a.data[index] = item
+    a.len += 1
+    return index
 }
 
-array_push_front :: proc "contextless" (a: ^$A/Array($N, $T), item: T) -> bool {
+array_append_safe :: proc "contextless" (a: ^$A/Array($N, $T), item: T) -> (int, bool) #optional_ok {
     if a.len < N {
+        index := a.len
+        a.data[index] = item
         a.len += 1
-        data := slice(a)
-        copy(data[1:], data[:])
-        data[0] = item
-        return true
+        return index, true
     }
-    return false
+    return 0, false
 }
+
+array_append_elems :: proc "contextless" (a: ^$A/Array($N, $T), items: ..T) -> int {
+    n := copy(a.data[a.len:], items[:])
+    a.len += n
+    return n
+}
+
 
 array_pop_back :: proc(a: ^$A/Array($N, $T), loc := #caller_location) -> T {
     assert(condition = (N > 0 && a.len > 0), loc = loc)
@@ -92,16 +95,7 @@ array_pop_back :: proc(a: ^$A/Array($N, $T), loc := #caller_location) -> T {
     return item
 }
 
-array_pop_front :: proc(a: ^$A/Array($N, $T), loc := #caller_location) -> T {
-    assert(condition = (N > 0 && a.len > 0), loc = loc)
-    item := a.data[0]
-    s := slice(a)
-    copy(s[:], s[1:])
-    a.len -= 1
-    return item
-}
-
-array_pop_back_safe :: proc "contextless" (a: ^$A/Array($N, $T)) -> (item: T, ok: bool) {
+array_pop_back_safe :: proc "contextless" (a: ^$A/Array($N, $T)) -> (item: T, ok: bool) #optional_ok {
     if N > 0 && a.len > 0 {
         item = a.data[a.len - 1]
         a.len -= 1
@@ -110,22 +104,7 @@ array_pop_back_safe :: proc "contextless" (a: ^$A/Array($N, $T)) -> (item: T, ok
     return
 }
 
-array_pop_front_safe :: proc "contextless" (a: ^$A/Array($N, $T)) -> (item: T, ok: bool) {
-    if N > 0 && a.len > 0 {
-        item = a.data[0]
-        s := slice(a)
-        copy(s[:], s[1:])
-        a.len -= 1
-        ok = true
-    }
-    return
-}
-
-array_ordered_remove :: proc "contextless" (
-    a: ^$A/Array($N, $T),
-    #any_int index: int,
-    loc := #caller_location,
-) #no_bounds_check {
+array_ordered_remove :: proc "contextless" (a: ^$A/Array($N, $T), #any_int index: int, loc := #caller_location) {
     runtime.bounds_check_error_loc(loc, index, a.len)
     if index + 1 < a.len {
         copy(a.data[index:], a.data[index + 1:])
@@ -133,11 +112,7 @@ array_ordered_remove :: proc "contextless" (
     a.len -= 1
 }
 
-array_unordered_remove :: proc "contextless" (
-    a: ^$A/Array($N, $T),
-    #any_int index: int,
-    loc := #caller_location,
-) #no_bounds_check {
+array_remove :: proc "contextless" (a: ^$A/Array($N, $T), #any_int index: int, loc := #caller_location) {
     runtime.bounds_check_error_loc(loc, index, a.len)
     n := a.len - 1
     if index != n {
@@ -146,16 +121,7 @@ array_unordered_remove :: proc "contextless" (
     a.len -= 1
 }
 
-array_clear :: proc "contextless" (a: ^$A/Array($N, $T)) {
-    a.len = 0
-}
-
-array_push_back_elems :: proc "contextless" (a: ^$A/Array($N, $T), items: ..T) {
-    n := copy(a.data[a.len:], items[:])
-    a.len += n
-}
-
-array_inject_at :: proc "contextless" (a: ^$A/Array($N, $T), item: T, #any_int index: int) -> bool #no_bounds_check {
+array_inject_at :: proc "contextless" (a: ^$A/Array($N, $T), item: T, #any_int index: int) -> bool {
     if a.len < N && index >= 0 && index <= N {
         a.len += 1
         for i := a.len - 1; i >= index + 1; i -= 1 {
@@ -165,14 +131,6 @@ array_inject_at :: proc "contextless" (a: ^$A/Array($N, $T), item: T, #any_int i
         return true
     }
     return false
-}
-
-array_append_elem :: array_push_back
-array_append_elems :: array_push_back_elems
-
-array_append :: proc {
-    array_push_back,
-    array_push_back_elems,
 }
 
 
@@ -186,35 +144,40 @@ Soa_Array :: struct($N: int, $T: typeid) where N >= 0 {
     len:  int,
 }
 
-soa_array_len :: #force_inline proc "contextless" (a: $A/Soa_Array) -> int {
-    return a.len
-}
-
-soa_array_cap :: #force_inline proc "contextless" (a: $A/Soa_Array) -> int {
-    return builtin.len(a.data)
+soa_array_set_safe :: proc "contextless" (a: $A/Soa_Array($N, $T), #any_int index: int, value: T) -> bool {
+    if index < 0 || index >= a.len {
+        return false
+    }
+    a.data[index] = value
 }
 
 soa_array_slice :: #force_inline proc "contextless" (a: ^$A/Soa_Array($N, $T)) -> #soa[]T {
     return a.data[:a.len]
 }
 
-@(require_results)
-soa_array_in_bounds :: #force_inline proc "contextless" (a: $A/Soa_Array($N, $T), #any_int index: int) -> bool {
+soa_array_has_index :: proc "contextless" (a: ^$A/Soa_Array, #any_int index: int) {
     return index >= 0 && index < a.len
 }
 
 @(require_results)
-soa_array_get :: #force_inline proc "contextless" (a: $A/Soa_Array($N, $T), #any_int index: int) -> T {
+soa_array_get :: proc(a: $A/Soa_Array($N, $T), #any_int index: int) -> T {
+    assert(index >= 0 && index < a.len)
     return a.data[index]
 }
 
 @(require_results)
-soa_array_get_ptr :: #force_inline proc "contextless" (a: ^$A/Soa_Array($N, $T), #any_int index: int) -> #soa^#soa[N]T {
+soa_array_get_ptr :: proc(a: $A/Soa_Array($N, $T), #any_int index: int) -> ^T {
+    assert(index >= 0 && index < a.len)
     return &a.data[index]
 }
 
+soa_array_set :: proc(a: $A/Soa_Array($N, $T), #any_int index: int, value: T) {
+    assert(index >= 0 && index < a.len)
+    a.data[index] = value
+}
+
 @(require_results)
-soa_array_get_safe :: proc "contextless" (a: $A/Soa_Array($N, $T), #any_int index: int) -> (T, bool) #no_bounds_check {
+soa_array_get_safe :: proc "contextless" (a: $A/Soa_Array($N, $T), #any_int index: int) -> (T, bool) #optional_ok {
     if index < 0 || index >= a.len {
         return {}, false
     }
@@ -222,29 +185,18 @@ soa_array_get_safe :: proc "contextless" (a: $A/Soa_Array($N, $T), #any_int inde
 }
 
 @(require_results)
-soa_array_get_ptr_safe :: proc(
-    a: ^$A/Soa_Array($N, $T),
-    #any_int index: int,
-) -> (
-    result: #soa^#soa[N]T,
-    ok: bool,
-) #no_bounds_check {
+soa_array_get_ptr_safe :: proc(a: ^$A/Soa_Array($N, $T), #any_int index: int) -> (result: #soa^#soa[N]T, ok: bool) #optional_ok {
     if index < 0 || index >= a.len {
         return {}, false
     }
     return &a.data[index], true
 }
 
-soa_array_set :: proc "contextless" (a: ^$A/Soa_Array($N, $T), #any_int index: int, item: T) {
-    a.data[index] = item
-}
-
 soa_array_resize :: proc "contextless" (a: ^$A/Soa_Array, #any_int length: int) {
     a.len = clamp(length, 0, builtin.len(a.data))
 }
 
-
-soa_array_push_back :: proc "contextless" (a: ^$A/Soa_Array($N, $T), item: T) -> bool {
+soa_array_append :: proc "contextless" (a: ^$A/Soa_Array($N, $T), item: T) -> bool {
     if a.len < N {
         a.data[a.len] = item
         a.len += 1
@@ -253,29 +205,9 @@ soa_array_push_back :: proc "contextless" (a: ^$A/Soa_Array($N, $T), item: T) ->
     return false
 }
 
-soa_array_push_front :: proc "contextless" (a: ^$A/Soa_Array($N, $T), item: T) -> bool {
-    if a.len < N {
-        a.len += 1
-        data := slice(a)
-        copy(data[1:], data[:])
-        data[0] = item
-        return true
-    }
-    return false
-}
-
 soa_array_pop_back :: proc(a: ^$A/Soa_Array($N, $T), loc := #caller_location) -> T {
     assert(condition = (N > 0 && a.len > 0), loc = loc)
     item := a.data[a.len - 1]
-    a.len -= 1
-    return item
-}
-
-soa_array_pop_front :: proc(a: ^$A/Soa_Array($N, $T), loc := #caller_location) -> T {
-    assert(condition = (N > 0 && a.len > 0), loc = loc)
-    item := a.data[0]
-    s := slice(a)
-    copy(s[:], s[1:])
     a.len -= 1
     return item
 }
@@ -300,11 +232,7 @@ soa_array_pop_front_safe :: proc "contextless" (a: ^$A/Soa_Array($N, $T)) -> (it
     return
 }
 
-soa_array_ordered_remove :: proc "contextless" (
-    a: ^$A/Soa_Array($N, $T),
-    #any_int index: int,
-    loc := #caller_location,
-) #no_bounds_check {
+soa_array_ordered_remove :: proc "contextless" (a: ^$A/Soa_Array($N, $T), #any_int index: int, loc := #caller_location) {
     runtime.bounds_check_error_loc(loc, index, a.len)
     if index + 1 < a.len {
         copy(a.data[index:], a.data[index + 1:])
@@ -312,11 +240,7 @@ soa_array_ordered_remove :: proc "contextless" (
     a.len -= 1
 }
 
-soa_array_unordered_remove :: proc "contextless" (
-    a: ^$A/Soa_Array($N, $T),
-    #any_int index: int,
-    loc := #caller_location,
-) #no_bounds_check {
+soa_array_remove :: proc "contextless" (a: ^$A/Soa_Array($N, $T), #any_int index: int, loc := #caller_location) {
     runtime.bounds_check_error_loc(loc, index, a.len)
     n := a.len - 1
     if index != n {
@@ -329,12 +253,12 @@ soa_array_clear :: proc "contextless" (a: ^$A/Soa_Array($N, $T)) {
     a.len = 0
 }
 
-soa_array_push_back_elems :: proc "contextless" (a: ^$A/Soa_Array($N, $T), items: ..T) {
+soa_array_append_elems :: proc "contextless" (a: ^$A/Soa_Array($N, $T), items: ..T) {
     n := copy(a.data[a.len:], items[:])
     a.len += n
 }
 
-soa_array_inject_at :: proc "contextless" (a: ^$A/Soa_Array($N, $T), item: T, #any_int index: int) -> bool #no_bounds_check {
+soa_array_inject_at :: proc "contextless" (a: ^$A/Soa_Array($N, $T), item: T, #any_int index: int) -> bool {
     if a.len < N && index >= 0 && index <= N {
         a.len += 1
         for i := a.len - 1; i >= index + 1; i -= 1 {
@@ -345,126 +269,3 @@ soa_array_inject_at :: proc "contextless" (a: ^$A/Soa_Array($N, $T), item: T, #a
     }
     return false
 }
-
-soa_array_append_elem :: soa_array_push_back
-soa_array_append_elems :: soa_array_push_back_elems
-
-soa_array_append :: proc {
-    soa_array_push_back,
-    soa_array_push_back_elems,
-}
-
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Arr utils
-//
-
-arr_len :: proc {
-    array_len,
-    soa_array_len,
-}
-
-arr_cap :: proc {
-    array_cap,
-    soa_array_cap,
-}
-
-arr_slice :: proc {
-    array_slice,
-    soa_array_slice,
-}
-
-arr_in_bounds :: proc {
-    array_in_bounds,
-    soa_array_in_bounds,
-}
-
-arr_get :: proc {
-    array_get,
-    soa_array_get,
-}
-
-arr_get_ptr :: proc {
-    array_get_ptr,
-    soa_array_get_ptr,
-}
-
-arr_get_safe :: proc {
-    array_get_safe,
-    soa_array_get_safe,
-}
-
-arr_get_ptr_safe :: proc {
-    array_get_ptr_safe,
-    soa_array_get_ptr_safe,
-}
-
-arr_set :: proc {
-    array_set,
-    soa_array_set,
-}
-
-arr_resize :: proc {
-    array_resize,
-    soa_array_resize,
-}
-
-arr_push_back :: proc {
-    array_push_back,
-    soa_array_push_back,
-}
-
-arr_push_front :: proc {
-    array_push_front,
-    soa_array_push_front,
-}
-
-arr_pop_back :: proc {
-    array_pop_back,
-    soa_array_pop_back,
-}
-
-arr_pop_front :: proc {
-    array_pop_front,
-    soa_array_pop_front,
-}
-
-arr_pop_back_safe :: proc {
-    array_pop_back_safe,
-    soa_array_pop_back_safe,
-}
-
-arr_pop_front_safe :: proc {
-    array_pop_front_safe,
-    soa_array_pop_front_safe,
-}
-
-arr_ordered_remove :: proc {
-    array_ordered_remove,
-    soa_array_ordered_remove,
-}
-
-arr_unordered_remove :: proc {
-    array_unordered_remove,
-    soa_array_unordered_remove,
-}
-
-arr_clear :: proc {
-    array_clear,
-    soa_array_clear,
-}
-
-arr_push_back_elems :: proc {
-    array_push_back_elems,
-    soa_array_push_back_elems,
-}
-
-arr_inject_at :: proc {
-    array_inject_at,
-    soa_array_inject_at,
-}
-
-arr_append :: arr_push_back
-arr_append_elem :: arr_push_back
-arr_append_elems :: arr_push_back_elems

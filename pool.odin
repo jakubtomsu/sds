@@ -1,116 +1,101 @@
-package static_data_structures
+package sds
 
 import "base:intrinsics"
+
+// TODO: switch from max_index to len?
+// len wouldn't mean the number if items though
 
 // Pool
 // Sparse array of items. Slots of removed items are reused later.
 // All operations are O(1).
-// Doesn't support iteration.
 // Index 0 is for "invalid"
-// odinfmt: disable
-Pool :: struct($Num: int, $Index, $Gen, $Val: typeid) #align(64)
-where intrinsics.type_is_integer(Index) &&
-    Num > 0 &&
-    (1 << (size_of(Index) * 8) >= Num) &&
-    (size_of(Gen) == 0 || intrinsics.type_is_unsigned(Gen))
-{
-    max_index:   Index,
-    first_free:  Index,
-    generations: [Num]Gen,
+Pool :: struct($Num: int, $Val: typeid, $Handle: typeid) #align (64) where Num > 0 {
+    max_index:   int,
+    first_free:  int,
+    generations: [Num]intrinsics.type_field_type(Handle, "gen"),
     // zero = never assigned, invalid
-    // max(Index) = slot is currently used
+    // max(Handle_Index) = slot is currently used
     // other (1..<N) = used in a free list of unused slots
-    indexes:     [Num]Index,
-    values:      [Num]Val,
+    indexes:     [Num]intrinsics.type_field_type(Handle, "index"),
+    data:        [Num]Val,
 }
-// odinfmt: enable
 
-pool_clear :: proc "contextless" (p: ^$T/Pool($N, $I, $G, $V)) {
+pool_cap :: proc "contextless" (p: $T/Pool($N, $V, $H)) -> int {
+    return N
+}
+
+pool_clear :: proc "contextless" (p: ^$T/Pool($N, $V, $H)) {
     p.first_free = 0
     p.max_index = 0
     intrinsics.mem_zero(&p.generations[0], size_of(p.generations))
     intrinsics.mem_zero(&p.indexes[0], size_of(p.indexes))
 }
 
-pool_append :: proc(
-    p: ^$T/Pool($N, $I, $G, $V),
-    value: V,
-    loc := #caller_location,
-) -> (
-    handle: Handle(I, G),
-    ok: bool,
-) #optional_ok {
+pool_append :: proc(p: ^$T/Pool($N, $V, $H), value: V, loc := #caller_location) -> (handle: H, ok: bool) #optional_ok {
     index := p.first_free
 
     // Eclude zero index!
-    if index > 0 && index < I(N) {
+    if index > 0 && int(index) < N {
         // get slot from the free list
-        p.first_free = p.indexes[index]
-        p.values[index] = value
+        p.first_free = auto_cast p.indexes[index]
+        p.data[index] = value
     } else {
         // append to the end
-        if p.max_index < 0 || p.max_index >= I(N) {
-            log_err("Pool is full", loc)
+        if p.max_index < 0 || int(p.max_index) >= N - 1 {
             return {}, false
         }
         p.max_index += 1
         index = p.max_index
     }
 
-    p.values[index] = value
-    p.indexes[index] = max(I)
+    p.data[index] = value
+    p.indexes[index] = max(intrinsics.type_field_type(H, "index"))
 
-    return handle_make(Handle(I, G), I(index), p.generations[index]), true
+    return {index = auto_cast index, gen = p.generations[index]}, true
 }
 
-pool_remove :: proc(p: ^$T/Pool($N, $I, $G, $V), handle: Handle(I, G), loc := #caller_location) -> (V, bool) {
-    index := handle_index(handle)
-
-    if index <= 0 || index >= I(N) {
+pool_remove :: proc(p: ^$T/Pool($N, $V, $H), handle: H, loc := #caller_location) -> (V, bool) {
+    if handle.index <= 0 || int(handle.index) >= N {
         return {}, false
     }
 
-    when size_of(G) > 0 {
-        gen := handle_gen(handle)
-        if p.generations[index] != gen {
+    when size_of(handle.gen) > 0 {
+        if p.generations[handle.index] != handle.gen {
             return {}, false
         }
-        p.generations[index] += 1
+        p.generations[handle.index] += 1
     }
 
-    removed_value := p.values[index]
-    p.indexes[index] = I(p.first_free)
-    p.first_free = index
+    removed_value := p.data[handle.index]
+    p.indexes[handle.index] = auto_cast p.first_free
+    p.first_free = auto_cast handle.index
 
     return removed_value, true
 }
 
 @(require_results)
-pool_index_is_valid :: #force_inline proc "contextless" (p: $T/Pool($N, $I, $G, $V), index: I) -> bool {
+pool_index_is_valid :: #force_inline proc "contextless" (p: $T/Pool($N, $V, $H), #any_int index: int) -> bool {
     return index > 0 || index < N
 }
 
 @(require_results)
-pool_is_index_used :: proc "contextless" (p: $T/Pool($N, $I, $G, $V), index: I) -> bool {
-    if index <= 0 || index >= I(N) {
+pool_has_index :: proc "contextless" (p: $T/Pool($N, $V, $H), #any_int index: int) -> bool {
+    if index <= 0 || index >= N {
         return false
     }
 
-    return p.indexes[index] == max(I)
+    return p.indexes[index] == max(intrinsics.type_field_type(H, "index"))
 }
 
 @(require_results)
-pool_is_handle_used :: proc "contextless" (p: $T/Pool($N, $I, $G, $V), handle: Handle(I, G)) -> bool {
-    index := handle_index(handle)
-
-    if !pool_is_index_used(p, index) {
+pool_has_handle :: proc "contextless" (p: $T/Pool($N, $V, $H), handle: H) -> bool {
+    if !pool_has_index(p, handle.index) {
         return false
     }
 
     // generation check
-    when size_of(G) > 0 {
-        gen := handle_gen(handle)
-        if p.generations[index] != gen {
+    when size_of(handle.gen) > 0 {
+        if p.generations[handle.index] != handle.gen {
             return false
         }
     }
@@ -118,64 +103,66 @@ pool_is_handle_used :: proc "contextless" (p: $T/Pool($N, $I, $G, $V), handle: H
     return true
 }
 
-// odinfmt: disable
 @(require_results)
-pool_get_safe :: proc (
-    p: $T/Pool($N, $I, $G, $V),
-    handle: Handle(I, G),
-    loc := #caller_location,
-) -> (
-    V,
-    bool,
-) #optional_ok {
-    if !pool_is_handle_used(p, handle) {
+pool_get_safe :: proc(p: $T/Pool($N, $V, $H), handle: H, loc := #caller_location) -> (V, bool) #optional_ok {
+    if !pool_has_handle(p, handle) {
         return {}, false
     }
-    return p.values[handle_index(handle)], true
+    return p.data[handle.index], true
 }
-// odinfmt: enable
 
 
 @(require_results)
-pool_get :: #force_inline proc "contextless" (p: $T/Pool($N, $I, $G, $V), handle: Handle(I, G)) -> V {
-    assert(pool_is_handle_used(p, handle))
-    return p.values[handle]
+pool_get :: #force_inline proc(p: $T/Pool($N, $V, $H), handle: H) -> V {
+    assert(pool_has_handle(p, handle))
+    return p.data[handle.index]
 }
 
-// odinfmt: disable
 @(require_results)
-pool_get_ptr_safe :: proc(p: ^$T/Pool($N, $I, $G, $V), handle: Handle(I, G), loc := #caller_location) -> (^V, bool) #optional_ok {
-    if !pool_is_handle_used(p^, handle) {
-        return &p.values[0], false
+pool_get_ptr_safe :: proc(p: ^$T/Pool($N, $V, $H), handle: H, loc := #caller_location) -> (^V, bool) #optional_ok {
+    if !pool_has_handle(p^, handle) {
+        return &p.data[0], false
     }
-    return &p.values[handle_index(handle)], true
+    return &p.data[handle.index], true
 }
 
 @(require_results)
-pool_get_ptr :: #force_inline proc "contextless" (p: $T/Pool($N, $I, $G, $V), handle: Handle(I, G)) -> V {
-    assert(pool_is_handle_used(p, handle))
-    return &p.values[handle_index(handle)]
+pool_get_ptr :: #force_inline proc(p: ^$T/Pool($N, $V, $H), handle: H) -> ^V {
+    assert(pool_has_handle(p^, handle))
+    return &p.data[handle.index]
 }
 
+// For iteration
 @(require_results)
-pool_get_ptr_by_index :: proc(p: ^$T/Pool($N, $I, $G, $V), index: I, loc := #caller_location) -> (^V, bool) #optional_ok {
-    if !pool_is_index_used(p^, index) {
-        return &p.value[0], false
+pool_index_get_safe :: proc(p: $T/Pool($N, $V, $H), #any_int index: int) -> (V, H, bool) {
+    if !pool_has_index(p, index) {
+        return {}, {}, false
     }
 
-    return &p.value[index], true
+    return p.data[index], {auto_cast index, p.generations[index]}, true
 }
-// odinfmt: enable
 
-pool_set_safe :: proc(p: ^$T/Pool($N, $I, $G, $V), handle: Handle(I, G), value: V, loc := #caller_location) -> bool {
-    if !pool_is_handle_used(p, handle) {
+
+// For iteration
+@(require_results)
+pool_index_get_ptr_safe :: proc(p: ^$T/Pool($N, $V, $H), #any_int index: int) -> (^V, H, bool) {
+    if !pool_has_index(p^, index) {
+        return {}, {}, false
+    }
+
+    return &p.data[index], {auto_cast index, p.generations[index]}, true
+}
+
+
+pool_set_safe :: proc(p: ^$T/Pool($N, $V, $H), handle: H, value: V, loc := #caller_location) -> bool {
+    if !pool_has_handle(p, handle) {
         return false
     }
-    p.values[handle_index(handle)] = value
+    p.data[handle.index] = value
     return true
 }
 
-pool_set :: proc "contextless" (p: ^$T/Pool($N, $I, $G, $V), handle: Handle(I, G), value: V) {
-    assert(pool_is_handle_used(p^, handle))
-    p.values[handle_index(handle)] = value
+pool_set :: proc(p: ^$T/Pool($N, $V, $H), handle: H, value: V) {
+    assert(pool_has_handle(p^, handle))
+    p.data[handle.index] = value
 }

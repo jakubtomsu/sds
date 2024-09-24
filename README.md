@@ -24,6 +24,11 @@ Improvements and bugfixe PRs are welcome. If you want to add a new datastructure
 You can copy&paste this code into your own package to use them directly, instead of using `sds.` prefix.
 ```odin
 import "sds"
+Array :: sds.Array
+Soa_Array :: sds.Soa_Array
+Pool :: sds.Pool
+Indirect_Array :: sds.Indirect_Array
+
 array_len :: sds.array_len
 array_cap :: sds.array_cap
 array_slice :: sds.array_slice
