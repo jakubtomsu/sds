@@ -9,10 +9,10 @@ import "base:intrinsics"
 // Zero initialized is valid cleared state.
 // Uses a pool to remap handles into raw indexes.
 // odinfmt: disable
-Indirect_Array :: struct($Num: int, $Val, $Handle: typeid) #align (64) where Num > 0 && Num < int(max(Handle_Index)) {
-    len:           Handle_Index,
-    pool:          Pool(Num, Handle_Index, Handle),
-    indexes:       [Num]Handle_Index,
+Indirect_Array :: struct($Num: int, $Val: typeid, $Handle: typeid) #align (64) where Num > 0 {
+    len:           int,
+    pool:          Pool(Num, intrinsics.type_field_type(Handle, "index"), Handle),
+    indexes:       [Num]intrinsics.type_field_type(Handle, "index"),
     data:          [Num]Val,
     invalid_value: Val,
 }
