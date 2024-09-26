@@ -1,6 +1,9 @@
 # 💾 Static Data Sructures
 A small Odin library with useful fixed-size data structures. This means all of the data uses just static arrays (`[N]T`), no dynamic allocations whatsoever.
 
+> ![WARNING]
+> I just got started with some changes for the public release of this lib so who knows if things work as they should.
+
 ## Datastructures
 - `Array` - Similar to `[dynamic]T`
 - `Soa_Array` - Similar to `#soa[dynamic]T`
