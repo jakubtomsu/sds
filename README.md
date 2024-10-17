@@ -14,10 +14,10 @@ A small Odin library with useful fixed-size data structures. This means all of t
 
 All of the datastructures follow ZII - zero is initialization. So you don't need to ever call any `_init/_make` procs.
 
-> [!NOTE]
+> [!TIP]
 > if you only need one particular datastructure, you should be able to just take that one particular odin file and put it directly in your project. This might be more conventient for smaller programs.
 
-> [!INFO]
+> [!NOTE]
 > Some very basic procedures like `len`, `cap`, `resize` etc are intentionally missing for simplicity.
 > Don't be afraid to just directly read the member values like `len` from the structs.
 
@@ -76,4 +76,4 @@ You might be thinking, why should I use fixed size datastructures, instead of le
 There are definitely cases when fixed-size is not a very good fit, but in software like games it works _really_ well in my experience.
 
 ## Contributing
-Improvements and bugfixe PRs are welcome. If you want to add a new datastructure I recommend opening an issue first.
+Improvements and bugfix PRs are welcome. If you want to add a new datastructure or a big feature like that I recommend opening an issue first.
