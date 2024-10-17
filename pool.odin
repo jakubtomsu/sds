@@ -2,13 +2,28 @@ package sds
 
 import "base:intrinsics"
 
-// Pool
-// Sparse array of items. Slots of removed items are reused later.
-// All operations are O(1).
-// Index 0 is for "invalid"
-Pool :: struct($Num: int, $Val: typeid, $Handle: typeid) #align (64) where Num > 0 {
-	max_index:   int,
-	first_free:  int,
+/*
+Pool - sparse buffer
+
+Slots of removed items are kept in a free list and reused later.
+All operations are O(1).
+Index 0 is for "invalid value".
+
+Iterate with something like this:
+```odin
+for i in 1..=my_pool.max_index {
+	ptr, handle := sds.pool_index_get_ptr_safe(&my_pool, i) or_continue
+	// Alternatively use sds.pool_index_get_safe when iterating by value
+	// ...
+}
+```
+
+Note: the reason why this takes a Handle parameter instead of the Index and Gen directly is
+to better support distinct handle types, even in return values etc.
+*/
+Pool :: struct($Num: int, $Val: typeid, $Handle: typeid) where Num > 0 {
+	max_index:   i32,
+	first_free:  i32,
 	// Indexes:
 	// zero = never assigned, invalid
 	// max(Handle_Index) = slot is currently used
@@ -17,30 +32,19 @@ Pool :: struct($Num: int, $Val: typeid, $Handle: typeid) #align (64) where Num >
 	data:        [Num]Val,
 }
 
-pool_cap :: proc "contextless" (p: $T/Pool($N, $V, $H)) -> int {
-	return N
-}
-
 pool_clear :: proc "contextless" (p: ^$T/Pool($N, $V, $H)) {
 	p.first_free = 0
 	p.max_index = 0
-	intrinsics.mem_zero(&p.gen_indexes[0], size_of(p.generations))
+	intrinsics.mem_zero(&p.gen_indexes, size_of(p.gen_indexes))
 }
 
-pool_append :: proc(
-	p: ^$T/Pool($N, $V, $H),
-	value: V,
-	loc := #caller_location,
-) -> (
-	handle: H,
-	ok: bool,
-) #optional_ok {
+pool_append :: proc(p: ^$T/Pool($N, $V, $H), value: V, loc := #caller_location) -> (handle: H, ok: bool) #optional_ok {
 	index := p.first_free
 
 	// Eclude zero index!
 	if index > 0 && int(index) < N {
 		// get slot from the free list
-		p.first_free = auto_cast p.indexes[index]
+		p.first_free = auto_cast p.gen_indexes[index].index
 		p.data[index] = value
 	} else {
 		// append to the end
@@ -54,10 +58,10 @@ pool_append :: proc(
 	p.data[index] = value
 	p.gen_indexes[index].index = max(intrinsics.type_field_type(H, "index"))
 
-	return {index = auto_cast index, gen = p.generations[index]}, true
+	return {index = auto_cast index, gen = p.gen_indexes[index].gen}, true
 }
 
-pool_remove :: proc(p: ^$T/Pool($N, $V, $H), handle: H, loc := #caller_location) -> (V, bool) {
+pool_remove :: proc(p: ^$T/Pool($N, $V, $H), handle: H, loc := #caller_location) -> (V, bool) #optional_ok {
 	if handle.index <= 0 || int(handle.index) >= N {
 		return {}, false
 	}
@@ -77,10 +81,7 @@ pool_remove :: proc(p: ^$T/Pool($N, $V, $H), handle: H, loc := #caller_location)
 }
 
 @(require_results)
-pool_index_is_valid :: #force_inline proc "contextless" (
-	p: $T/Pool($N, $V, $H),
-	#any_int index: int,
-) -> bool {
+pool_index_is_valid :: #force_inline proc "contextless" (p: $T/Pool($N, $V, $H), #any_int index: int) -> bool {
 	return index > 0 || index < N
 }
 
@@ -90,7 +91,7 @@ pool_has_index :: proc "contextless" (p: $T/Pool($N, $V, $H), #any_int index: in
 		return false
 	}
 
-	return p.gen_indexes[index].gen == max(intrinsics.type_field_type(H, "index"))
+	return p.gen_indexes[index].index == max(intrinsics.type_field_type(H, "index"))
 }
 
 @(require_results)
@@ -110,14 +111,14 @@ pool_has_handle :: proc "contextless" (p: $T/Pool($N, $V, $H), handle: H) -> boo
 }
 
 @(require_results)
-pool_get_safe :: proc(
-	p: $T/Pool($N, $V, $H),
-	handle: H,
-	loc := #caller_location,
-) -> (
-	V,
-	bool,
-) #optional_ok {
+pool_get :: #force_inline proc(p: $T/Pool($N, $V, $H), handle: H, loc := #caller_location) -> V {
+	assert(pool_has_index(p, handle.index), loc = loc)
+	assert(pool_has_handle(p, handle), loc = loc)
+	return p.data[handle.index]
+}
+
+@(require_results)
+pool_get_safe :: proc(p: $T/Pool($N, $V, $H), handle: H, loc := #caller_location) -> (V, bool) #optional_ok {
 	if !pool_has_handle(p, handle) {
 		return {}, false
 	}
@@ -126,30 +127,17 @@ pool_get_safe :: proc(
 
 
 @(require_results)
-pool_get :: #force_inline proc(p: $T/Pool($N, $V, $H), handle: H) -> V {
-	assert(pool_has_handle(p, handle))
-	return p.data[handle.index]
+pool_get_ptr :: #force_inline proc(p: ^$T/Pool($N, $V, $H), handle: H, loc := #caller_location) -> ^V {
+	assert(pool_has_handle(p^, handle), loc = loc)
+	return &p.data[handle.index]
 }
 
 @(require_results)
-pool_get_ptr_safe :: proc(
-	p: ^$T/Pool($N, $V, $H),
-	handle: H,
-	loc := #caller_location,
-) -> (
-	^V,
-	bool,
-) #optional_ok {
+pool_get_ptr_safe :: proc(p: ^$T/Pool($N, $V, $H), handle: H, loc := #caller_location) -> (^V, bool) #optional_ok {
 	if !pool_has_handle(p^, handle) {
 		return &p.data[0], false
 	}
 	return &p.data[handle.index], true
-}
-
-@(require_results)
-pool_get_ptr :: #force_inline proc(p: ^$T/Pool($N, $V, $H), handle: H) -> ^V {
-	assert(pool_has_handle(p^, handle))
-	return &p.data[handle.index]
 }
 
 // For iteration
@@ -174,20 +162,15 @@ pool_index_get_ptr_safe :: proc(p: ^$T/Pool($N, $V, $H), #any_int index: int) ->
 }
 
 
-pool_set_safe :: proc(
-	p: ^$T/Pool($N, $V, $H),
-	handle: H,
-	value: V,
-	loc := #caller_location,
-) -> bool {
-	if !pool_has_handle(p, handle) {
+pool_set_safe :: proc(p: ^$T/Pool($N, $V, $H), handle: H, value: V, loc := #caller_location) -> bool {
+	if !pool_has_handle(p^, handle) {
 		return false
 	}
 	p.data[handle.index] = value
 	return true
 }
 
-pool_set :: proc(p: ^$T/Pool($N, $V, $H), handle: H, value: V) {
-	assert(pool_has_handle(p^, handle))
+pool_set :: proc(p: ^$T/Pool($N, $V, $H), handle: H, value: V, loc := #caller_location) {
+	assert(pool_has_handle(p^, handle), loc = loc)
 	p.data[handle.index] = value
 }

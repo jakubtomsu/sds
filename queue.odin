@@ -2,34 +2,22 @@ package sds
 
 import "base:runtime"
 
-// Queue / Ring Buffer / Circular Buffer
-Queue :: struct($Num: uint, $Val: typeid) {
-    offset: uint,
-    len:    uint,
-    data:   [Num]Val,
-}
-
-queue_clear :: proc(q: ^$T/Queue($N, $V)) {
-    q.head = 0
-    q.tail = 0
+// Queue / Ring Buffer / Circular Buffer.
+// Based on 'core:container/queue'.
+Queue :: struct($Num: u64, $Val: typeid) where Num > 0 {
+    offset:         u64,
+    len:            u64,
+    data:           [Num]Val,
+    invalid_value:  Val,
 }
 
 @(require_results)
-queue_len :: proc "contextless" (q: $T/Queue($N, $V)) -> int {
-    return int(q.len)
-}
-
-queue_space :: proc "contextless" (q: $T/Queue($N, $V)) -> int {
-    return N - q.len
-}
-
-@(require_results)
-queue_get :: proc(q: ^$T/Queue($N, $V), #any_int index: int) -> V {
+queue_get :: proc(q: $T/Queue($N, $V), #any_int index: int) -> V {
     return q.data[(int(q.offset) + index) % int(N)]
 }
 
 @(require_results)
-queue_get_safe :: proc(q: ^$T/Queue($N, $V), #any_int index: int, loc := #caller_location) -> (V, bool) #optional_ok {
+queue_get_safe :: proc(q: $T/Queue($N, $V), #any_int index: int, loc := #caller_location) -> (V, bool) #optional_ok {
     if index < 0 || index >= int(N) {
         return {}, false
     }
@@ -42,15 +30,15 @@ queue_get_ptr :: proc(q: ^$T/Queue($N, $V), #any_int index: int) -> ^V {
 }
 
 @(require_results)
-queue_get_ptr_safe :: proc(q: ^$T/Queue($N, $V), #any_int index: int, loc := #caller_location) -> ^V {
-    if index < 0 || index >= N {
-        return {}, false
+queue_get_ptr_safe :: proc(q: ^$T/Queue($N, $V), #any_int index: int, loc := #caller_location) -> (^V, bool) #optional_ok {
+    if index < 0 || index >= int(N) {
+        return &q.invalid_value, false
     }
     return &q.data[(int(q.offset) + index) % int(N)], true
 }
 
-queue_set :: proc(q: ^$T/Queue($N, $V), #any_int index: int, val: V) {
-    assert(index >= 0 && index < q.len)
+queue_set :: proc(q: ^$T/Queue($N, $V), #any_int index: int, val: V, loc := #caller_location) {
+    runtime.bounds_check_error_loc(loc, index, int(a.len))
     q.data[(int(q.offset) + index) % int(N)] = val
 }
 
@@ -75,7 +63,7 @@ queue_peek_back :: proc(q: ^$T/Queue($N, $V)) -> ^V {
 }
 
 @(require_results)
-queue_peek_back_safe :: proc(q: ^$T/Queue($N, $V)) -> (^V, bool) {
+queue_peek_back_safe :: proc(q: ^$T/Queue($N, $V)) -> (^V, bool) #optional_ok {
     if q.len <= 0 do return nil, false
     return &q.data[(q.offset + q.len - 1) % N], true
 }
@@ -85,18 +73,18 @@ queue_push_back :: proc(q: ^$T/Queue($N, $V), value: V) -> bool {
     if q.len >= N {
         return false
     }
-    q.data[(q.offset + uint(q.len)) % N] = value
+    q.data[(q.offset + q.len) % N] = value
     q.len += 1
     return true
 }
 
 // Push multiple elements to the front of the queue
-queue_push_back_elems :: proc(q: ^$T/Queue($N, $V), values: ..V, loc := #caller_location) -> bool {
-    n := uint(len(values))
+queue_push_back_elems :: proc(q: ^$T/Queue($N, $V), elems: ..V, loc := #caller_location) -> bool {
+    n := u64(len(elems))
     if q.len + n > N {
         return false
     }
-    sz := uint(N)
+    sz := u64(N)
     insert_from := (q.offset + q.len) % sz
     insert_to := n
     if insert_from + insert_to > sz {
@@ -109,11 +97,11 @@ queue_push_back_elems :: proc(q: ^$T/Queue($N, $V), values: ..V, loc := #caller_
 }
 
 // Push an element to the front of the queue
-queue_push_front :: proc(q: ^$T/Queue($N, $V), value: V, loc := #caller_location) -> bool {
+queue_push_front :: proc(q: ^$T/Queue($N, $V), elem: V, loc := #caller_location) -> bool {
     if q.len >= N {
         return false
     }
-    q.offset = uint(q.offset - 1 + N) % N
+    q.offset = (q.offset - 1 + N) % N
     q.len += 1
     q.data[q.offset] = elem
     return true
@@ -140,7 +128,7 @@ queue_pop_back_safe :: proc(q: ^$T/Queue($N, $V)) -> (V, bool) #optional_ok {
 
 // Pop an element from the front of the queue
 @(require_results)
-queue_pop_front :: proc "contextless" (q: ^$T/Queue($N, $V)) -> (result: V) {
+queue_pop_front :: proc(q: ^$T/Queue($N, $V)) -> (result: V) {
     assert(q.len > 0)
     result = q.data[q.offset]
     q.offset = (q.offset + 1) % N

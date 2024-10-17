@@ -2,14 +2,13 @@ package sds
 
 import "base:intrinsics"
 
-// odinfmt: disable
-// Zero value ({}) means invalid handle
+// Zero value ({}) means the handle is invalid.
+// 'Gen' can be 'struct{}' to disable generation checks.
+// Note: using 'distinct' for your custom handles is recommended.
 Handle :: struct(Index, Gen: typeid)
 where
     intrinsics.type_is_integer(Index) &&
-    (intrinsics.type_is_integer(Gen) || size_of(Gen) == 0)
-{
+    (intrinsics.type_is_integer(Gen) || size_of(Gen) == 0) {
     index: Index,
     gen:   Gen,
 }
-// odinfmt: enable

@@ -1,5 +1,7 @@
 package sds
 
+// This file contains procedure groups for common operations on datastructures.
+
 slice :: proc {
 	array_slice,
 	soa_array_slice,
@@ -12,6 +14,7 @@ set :: proc {
 	pool_set,
 	indirect_array_set,
 	queue_set,
+	bit_array_set,
 }
 
 get :: proc {
@@ -20,6 +23,7 @@ get :: proc {
 	pool_get,
 	indirect_array_get,
 	queue_get,
+	bit_array_get,
 }
 
 get_ptr :: proc {
@@ -36,6 +40,7 @@ set_safe :: proc {
 	pool_set_safe,
 	indirect_array_set_safe,
 	queue_set_safe,
+	bit_array_set_safe,
 }
 
 get_safe :: proc {
@@ -44,6 +49,7 @@ get_safe :: proc {
 	pool_get_safe,
 	indirect_array_get_safe,
 	queue_get_safe,
+	bit_array_get_safe,
 }
 
 get_ptr_safe :: proc {
@@ -66,11 +72,6 @@ has_handle :: proc {
 	indirect_array_has_handle,
 }
 
-resize :: proc {
-	array_resize,
-	soa_array_resize,
-}
-
 // TODO Rename to push?
 append :: proc {
 	array_append,
@@ -86,7 +87,6 @@ append_safe :: proc {
 
 append_elems :: proc {
 	array_append_elems,
-	soa_array_append_elems,
 }
 
 pop_back :: proc {
@@ -109,19 +109,9 @@ pop_front_safe :: proc {
 	queue_pop_front_safe,
 }
 
-ordered_remove :: proc {
-	array_ordered_remove,
-	soa_array_ordered_remove,
-}
-
 remove :: proc {
 	array_remove,
 	soa_array_remove,
 	pool_remove,
 	indirect_array_remove,
-}
-
-inject_at :: proc {
-	array_inject_at,
-	soa_array_inject_at,
 }

@@ -14,6 +14,48 @@ A small Odin library with useful fixed-size data structures. This means all of t
 
 All of the datastructures follow ZII - zero is initialization. So you don't need to ever call any `_init/_make` procs.
 
+> [!NOTE]
+> if you only need one particular datastructure, you should be able to just take that one particular odin file and put it directly in your project. This might be more conventient for smaller programs.
+
+> [!INFO]
+> Some very basic procedures like `len`, `cap`, `resize` etc are intentionally missing for simplicity.
+> Don't be afraid to just directly read the member values like `len` from the structs.
+
+### Pool Example
+The Pool datastructure is probably the most useful to gamedevs, so here is a short example with practical usage:
+```odin
+import "sds"
+
+// Distinct type for safety!
+Enemy_Handle :: distinct sds.Handle(u16, u16)
+
+Enemy :: struct {
+    pos:    [2]f32,
+    health: f32,
+}
+
+Game :: struct {
+    enemies: sds.Pool(1024, Enemy, Enemy_Handle),
+}
+
+game_tick :: proc(game: ^Game, delta: f32) {
+    for i in 1..=game.enemies.max_index {
+        enemy, handle := sds.pool_index_get_ptr_safe(&game.enemies, i) or_continue
+        // ...
+        if enemy.health < 0 {
+            sds.remove(&game.enemies, handle)
+        }
+    }
+}
+
+game_draw :: proc(game: Game) {
+    for i in 1..=game.enemies.max_index {
+        enemy, handle := sds.pool_index_get_safe(game.enemies, i) or_continue
+        // ...
+    }
+}
+```
+
 ## Handles
 Pool and Indirect_Array use Handles to address items. A handle is sort of like a unique ID, however it can optionally also have a "generation index". This is useful because IDs can be reused, but the generation index check makes sure you are accessing the item you _think_ you are. This prevents "use-after-removed" kinds of bugs.
 
