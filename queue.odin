@@ -2,8 +2,11 @@ package sds
 
 import "base:runtime"
 
-// Queue / Ring Buffer / Circular Buffer.
-// Based on 'core:container/queue'.
+/*
+Queue (Ring Buffer / Circular Buffer)
+
+Based on 'core:container/queue'.
+*/
 Queue :: struct($Num: u64, $Val: typeid) where Num > 0 {
     offset:         u64,
     len:            u64,
@@ -12,12 +15,12 @@ Queue :: struct($Num: u64, $Val: typeid) where Num > 0 {
 }
 
 @(require_results)
-queue_get :: proc(q: $T/Queue($N, $V), #any_int index: int) -> V {
+queue_get :: proc "contextless" (q: $T/Queue($N, $V), #any_int index: int) -> V {
     return q.data[(int(q.offset) + index) % int(N)]
 }
 
 @(require_results)
-queue_get_safe :: proc(q: $T/Queue($N, $V), #any_int index: int, loc := #caller_location) -> (V, bool) #optional_ok {
+queue_get_safe :: proc "contextless" (q: $T/Queue($N, $V), #any_int index: int, loc := #caller_location) -> (V, bool) #optional_ok {
     if index < 0 || index >= int(N) {
         return {}, false
     }
@@ -25,24 +28,24 @@ queue_get_safe :: proc(q: $T/Queue($N, $V), #any_int index: int, loc := #caller_
 }
 
 @(require_results)
-queue_get_ptr :: proc(q: ^$T/Queue($N, $V), #any_int index: int) -> ^V {
+queue_get_ptr :: proc "contextless" (q: ^$T/Queue($N, $V), #any_int index: int) -> ^V {
     return &q.data[(int(q.offset) + index) % int(N)]
 }
 
 @(require_results)
-queue_get_ptr_safe :: proc(q: ^$T/Queue($N, $V), #any_int index: int, loc := #caller_location) -> (^V, bool) #optional_ok {
+queue_get_ptr_safe :: proc "contextless" (q: ^$T/Queue($N, $V), #any_int index: int, loc := #caller_location) -> (^V, bool) #optional_ok {
     if index < 0 || index >= int(N) {
         return &q.invalid_value, false
     }
     return &q.data[(int(q.offset) + index) % int(N)], true
 }
 
-queue_set :: proc(q: ^$T/Queue($N, $V), #any_int index: int, val: V, loc := #caller_location) {
+queue_set :: proc "contextless" (q: ^$T/Queue($N, $V), #any_int index: int, val: V, loc := #caller_location) {
     runtime.bounds_check_error_loc(loc, index, int(a.len))
     q.data[(int(q.offset) + index) % int(N)] = val
 }
 
-queue_set_safe :: proc(q: ^$T/Queue($N, $V), #any_int index: int, val: V, loc := #caller_location) -> bool {
+queue_set_safe :: proc "contextless" (q: ^$T/Queue($N, $V), #any_int index: int, val: V, loc := #caller_location) -> bool {
     if index < 0 || index >= N {
         return false
     }
@@ -51,25 +54,35 @@ queue_set_safe :: proc(q: ^$T/Queue($N, $V), #any_int index: int, val: V, loc :=
 }
 
 @(require_results)
-queue_peek_front :: proc(q: ^$T/Queue($N, $V)) -> ^V {
-    assert(q.len > 0)
+queue_peek_front :: proc "contextless" (q: ^$T/Queue($N, $V), loc := #caller_location) -> ^V {
+    assert_contextless(q.len > 0, "Queue is empty", loc)
     return &q.data[q.offset % N]
 }
 
 @(require_results)
-queue_peek_back :: proc(q: ^$T/Queue($N, $V)) -> ^V {
-    assert(q.len > 0)
+queue_peek_front_safe :: proc "contextless" (q: ^$T/Queue($N, $V), loc := #caller_location) -> (^V, bool) {
+    if q.len <= 0 {
+        return &q.invalid_value, false
+    }
+    return &q.data[q.offset % N]
+}
+
+@(require_results)
+queue_peek_back :: proc "contextless" (q: ^$T/Queue($N, $V), loc := #caller_location) -> ^V {
+    assert_contextless(q.len > 0, "Queue is empty", loc)
     return &q.data[(q.offset + q.len - 1) % N]
 }
 
 @(require_results)
-queue_peek_back_safe :: proc(q: ^$T/Queue($N, $V)) -> (^V, bool) #optional_ok {
-    if q.len <= 0 do return nil, false
+queue_peek_back_safe :: proc "contextless" (q: ^$T/Queue($N, $V)) -> (^V, bool) #optional_ok {
+    if q.len <= 0 {
+        return &q.invalid_value, false
+    }
     return &q.data[(q.offset + q.len - 1) % N], true
 }
 
 // Push an element to the back of the queue
-queue_push_back :: proc(q: ^$T/Queue($N, $V), value: V) -> bool {
+queue_push_back :: proc "contextless" (q: ^$T/Queue($N, $V), value: V) -> bool {
     if q.len >= N {
         return false
     }
@@ -79,7 +92,7 @@ queue_push_back :: proc(q: ^$T/Queue($N, $V), value: V) -> bool {
 }
 
 // Push multiple elements to the front of the queue
-queue_push_back_elems :: proc(q: ^$T/Queue($N, $V), elems: ..V, loc := #caller_location) -> bool {
+queue_push_back_elems :: proc "contextless" (q: ^$T/Queue($N, $V), elems: ..V) -> bool {
     n := u64(len(elems))
     if q.len + n > N {
         return false
@@ -97,7 +110,7 @@ queue_push_back_elems :: proc(q: ^$T/Queue($N, $V), elems: ..V, loc := #caller_l
 }
 
 // Push an element to the front of the queue
-queue_push_front :: proc(q: ^$T/Queue($N, $V), elem: V, loc := #caller_location) -> bool {
+queue_push_front :: proc "contextless" (q: ^$T/Queue($N, $V), elem: V) -> bool {
     if q.len >= N {
         return false
     }
@@ -110,15 +123,15 @@ queue_push_front :: proc(q: ^$T/Queue($N, $V), elem: V, loc := #caller_location)
 
 // Pop an element from the back of the queue
 @(require_results)
-queue_pop_back :: proc(q: ^$T/Queue($N, $V)) -> V {
-    assert(q.len > 0)
+queue_pop_back :: proc "contextless" (q: ^$T/Queue($N, $V), loc := #caller_location) -> V {
+    assert_contextless(q.len > 0, "Queue is empty", loc)
     q.len -= 1
     return q.data[(q.offset + q.len) % N]
 }
 
 // Safely pop an element from the back of the queue
 @(require_results)
-queue_pop_back_safe :: proc(q: ^$T/Queue($N, $V)) -> (V, bool) #optional_ok {
+queue_pop_back_safe :: proc "contextless" (q: ^$T/Queue($N, $V)) -> (V, bool) #optional_ok {
     if q.len <= 0 {
         return {}, false
     }
@@ -128,8 +141,8 @@ queue_pop_back_safe :: proc(q: ^$T/Queue($N, $V)) -> (V, bool) #optional_ok {
 
 // Pop an element from the front of the queue
 @(require_results)
-queue_pop_front :: proc(q: ^$T/Queue($N, $V)) -> (result: V) {
-    assert(q.len > 0)
+queue_pop_front :: proc "contextless" (q: ^$T/Queue($N, $V), loc := #caller_location) -> (result: V) {
+    assert_contextless(q.len > 0, "Queue is empty", loc)
     result = q.data[q.offset]
     q.offset = (q.offset + 1) % N
     q.len -= 1
@@ -138,7 +151,7 @@ queue_pop_front :: proc(q: ^$T/Queue($N, $V)) -> (result: V) {
 
 // Safely pop an element from the front of the queues
 @(require_results)
-queue_pop_front_safe :: proc(q: ^$T/Queue($N, $V)) -> (result: V, ok: bool) #optional_ok {
+queue_pop_front_safe :: proc "contextless" (q: ^$T/Queue($N, $V)) -> (result: V, ok: bool) #optional_ok {
     if q.len <= 0 {
         return {}, false
     }

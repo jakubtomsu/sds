@@ -1,6 +1,6 @@
 package sds
 
-// This file contains procedure groups for common operations on datastructures.
+// Procedure groups for common operations on datastructures:
 
 slice :: proc {
 	array_slice,
@@ -17,23 +17,6 @@ set :: proc {
 	bit_array_set,
 }
 
-get :: proc {
-	array_get,
-	soa_array_get,
-	pool_get,
-	indirect_array_get,
-	queue_get,
-	bit_array_get,
-}
-
-get_ptr :: proc {
-	array_get_ptr,
-	soa_array_get_ptr,
-	pool_get_ptr,
-	indirect_array_get,
-	queue_get_ptr,
-}
-
 set_safe :: proc {
 	array_set_safe,
 	soa_array_set_safe,
@@ -41,6 +24,15 @@ set_safe :: proc {
 	indirect_array_set_safe,
 	queue_set_safe,
 	bit_array_set_safe,
+}
+
+get :: proc {
+	array_get,
+	soa_array_get,
+	pool_get,
+	indirect_array_get,
+	queue_get,
+	bit_array_get,
 }
 
 get_safe :: proc {
@@ -52,11 +44,19 @@ get_safe :: proc {
 	bit_array_get_safe,
 }
 
+get_ptr :: proc {
+	array_get_ptr,
+	soa_array_get_ptr,
+	pool_get_ptr,
+	indirect_array_get_ptr,
+	queue_get_ptr,
+}
+
 get_ptr_safe :: proc {
 	array_get_ptr_safe,
 	soa_array_get_ptr_safe,
 	pool_get_ptr_safe,
-	indirect_array_get_safe,
+	indirect_array_get_ptr_safe,
 	queue_get_ptr_safe,
 }
 
@@ -72,7 +72,6 @@ has_handle :: proc {
 	indirect_array_has_handle,
 }
 
-// TODO Rename to push?
 append :: proc {
 	array_append,
 	soa_array_append,

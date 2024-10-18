@@ -2,9 +2,15 @@ package sds
 
 import "base:runtime"
 
+/*
+SOA Array - (almost) fully compatible variant of Array
+
+Note: in this particular case it's not possible to store an invalid value like in all other datastructures,
+due to the way SOA pointers work. So a pointer to data[0] is returned instead and get_ptr_safe is _not_ #optional_ok.
+*/
 Soa_Array :: struct($N: i32, $T: typeid) where N >= 0 {
-    data: #soa[N]T `fmt:"len"`,
-    len:  i32,
+    data:          #soa[N]T,
+    len:           i32,
 }
 
 @(require_results)
@@ -18,18 +24,35 @@ soa_array_slice :: #force_inline proc "contextless" (a: ^$A/Soa_Array($N, $T)) -
 }
 
 @(require_results)
-soa_array_get :: proc(a: $A/Soa_Array($N, $T), #any_int index: int, loc := #caller_location) -> T {
+soa_array_get :: proc "contextless" (a: $A/Soa_Array($N, $T), #any_int index: int, loc := #caller_location) -> T {
     runtime.bounds_check_error_loc(loc, index, int(a.len))
     return a.data[index]
 }
 
 @(require_results)
-soa_array_get_ptr :: proc(a: ^$A/Soa_Array($N, $T), #any_int index: int, loc := #caller_location) -> #soa^#soa[N]T {
+soa_array_get_safe :: proc "contextless" (a: $A/Soa_Array($N, $T), #any_int index: int) -> (T, bool) #optional_ok {
+    if index < 0 || index >= int(a.len) {
+        return {}, false
+    }
+    return a.data[index], true
+}
+
+@(require_results)
+soa_array_get_ptr :: proc "contextless" (a: ^$A/Soa_Array($N, $T), #any_int index: int, loc := #caller_location) -> #soa^#soa[N]T {
     runtime.bounds_check_error_loc(loc, index, int(a.len))
     return &a.data[index]
 }
 
-soa_array_set :: proc(a: ^$A/Soa_Array($N, $T), #any_int index: int, value: T, loc := #caller_location) {
+@(require_results)
+soa_array_get_ptr_safe :: proc "contextless" (a: ^$A/Soa_Array($N, $T), #any_int index: int) -> (result: #soa^#soa[N]T, ok: bool) {
+    if index < 0 || index >= int(a.len) {
+        // NOTE: not possible to return invalid value, that's why it's not #optional_ok
+        return &a.data[0], false
+    }
+    return &a.data[index], true
+}
+
+soa_array_set :: proc "contextless" (a: ^$A/Soa_Array($N, $T), #any_int index: int, value: T, loc := #caller_location) {
     runtime.bounds_check_error_loc(loc, index, int(a.len))
     a.data[index] = value
 }
@@ -42,51 +65,44 @@ soa_array_set_safe :: proc "contextless" (a: ^$A/Soa_Array($N, $T), #any_int ind
     return true
 }
 
-@(require_results)
-soa_array_get_safe :: proc "contextless" (a: $A/Soa_Array($N, $T), #any_int index: int) -> (T, bool) #optional_ok {
-    if index < 0 || index >= int(a.len) {
-        return {}, false
-    }
-    return a.data[index], true
-}
-
-@(require_results)
-soa_array_get_ptr_safe :: proc(a: ^$A/Soa_Array($N, $T), #any_int index: int) -> (result: #soa^#soa[N]T, ok: bool) #optional_ok {
-    if index < 0 || index >= int(a.len) {
-        return {}, false
-    }
-    return &a.data[index], true
-}
-
-soa_array_append :: proc (a: ^$A/Soa_Array($N, $T), item: T, loc := #caller_location) {
-    assert(a.len < i32(N), "Reached the array size limit", loc)
-    a.data[a.len] = item
+soa_array_append :: proc (a: ^$A/Soa_Array($N, $T), elem: T, loc := #caller_location) -> (index: int) {
+    assert_contextless(a.len < i32(N), "Reached the array size limit", loc)
+    index = int(a.len)
+    a.data[index] = elem
     a.len += 1
+    return index
 }
 
-soa_array_append_safe :: proc "contextless" (a: ^$A/Soa_Array($N, $T), item: T) -> bool {
-    if a.len < N {
-        a.data[a.len] = item
-        a.len += 1
-        return true
+soa_array_append_safe :: proc "contextless" (a: ^$A/Soa_Array($N, $T), elem: T) -> (index: int, ok: bool) #optional_ok {
+    index = soa_array_append_empty(a) or_return
+    a.data[index] = elem
+    return index, true
+}
+
+@(require_results)
+soa_array_append_empty :: proc "contextless" (a: ^$A/Soa_Array($N, $T)) -> (index: int, ok: bool) #optional_ok {
+    if a.len >= N {
+        return 0, false
     }
-    return false
+    index = int(a.len)
+    a.len += 1
+    return index, true
 }
 
-soa_array_pop_back :: proc(a: ^$A/Soa_Array($N, $T), loc := #caller_location) -> T {
-    assert(a.len > 0, loc = loc)
-    item := a.data[a.len - 1]
+soa_array_pop_back :: proc "contextless" (a: ^$A/Soa_Array($N, $T), loc := #caller_location) -> T {
+    assert_contextless(a.len > 0, "SOA Array is empty", loc)
+    elem := a.data[a.len - 1]
     a.len -= 1
-    return item
+    return elem
 }
 
-soa_array_pop_back_safe :: proc "contextless" (a: ^$A/Soa_Array($N, $T)) -> (item: T, ok: bool) #optional_ok {
+soa_array_pop_back_safe :: proc "contextless" (a: ^$A/Soa_Array($N, $T)) -> (elem: T, ok: bool) #optional_ok {
     if a.len <= 0 {
         return {}, false
     }
-    item = a.data[a.len - 1]
+    elem = a.data[a.len - 1]
     a.len -= 1
-    return item, true
+    return elem, true
 }
 
 soa_array_remove :: proc "contextless" (a: ^$A/Soa_Array($N, $T), #any_int index: int, loc := #caller_location) {

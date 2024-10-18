@@ -2,9 +2,14 @@ package sds
 
 import "base:intrinsics"
 
-// Zero value ({}) means the handle is invalid.
-// 'Gen' can be 'struct{}' to disable generation checks.
-// Note: using 'distinct' for your custom handles is recommended.
+/*
+Generational Handle
+
+Zero value ({}) means the handle is invalid.
+'Gen' can be 'struct{}' to disable generation checks.
+
+Note: using 'distinct' for your custom handles is recommended.
+*/
 Handle :: struct(Index, Gen: typeid)
 where
     intrinsics.type_is_integer(Index) &&

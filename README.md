@@ -1,9 +1,6 @@
 # 💾 Static Data Sructures
 A small Odin library with useful fixed-size data structures. This means all of the data uses just static arrays (`[N]T`), no dynamic allocations whatsoever.
 
-> [!WARNING]
-> I just got started with some changes for the public release of this lib so who knows if things work as they should.
-
 ## Datastructures
 - `Array` - Similar to `[dynamic]T`
 - `Soa_Array` - Similar to `#soa[dynamic]T`
@@ -12,7 +9,10 @@ A small Odin library with useful fixed-size data structures. This means all of t
 - `Queue` - A simple ring-buffer based queue
 - `Bit_Array` - Array of booleans stored as single bits. This can be useful in cases where `bit_set` is too small (>128 elements).
 
-All of the datastructures follow ZII - zero is initialization. So you don't need to ever call any `_init/_make` procs.
+All of the datastructures follow ZII - zero is initialization. So you don't need to ever call any `_init/_make` procs. There is also always a "dummy" invalid value which is returned in case `get_ptr_safe` fails (Note: SOA Array is the only exception).
+
+Most of the procs have a regular and a `_safe` version. The regular procedure asserts if anything is incorrect, e.g. if the item you're trying to look-up doesn't exist or if a new value cannot be appended.
+The safe version never panics/asserts and returns an OK boolean value.
 
 > [!TIP]
 > if you only need one particular datastructure, you should be able to just take that one particular odin file and put it directly in your project. This might be more conventient for smaller programs.
@@ -20,6 +20,25 @@ All of the datastructures follow ZII - zero is initialization. So you don't need
 > [!NOTE]
 > Some very basic procedures like `len`, `cap`, `resize` etc are intentionally missing for simplicity.
 > Don't be afraid to just directly read the member values like `len` from the structs.
+
+## Handles
+Pool and Indirect_Array use Handles to address items. A handle is sort of like a unique ID, however it can optionally also have a "generation index". This is useful because IDs can be reused, but the generation index check makes sure you are accessing the item you _think_ you are. This prevents "use-after-removed" kinds of bugs.
+
+I recommend reading this blog post by Andre Weissflog to learn more about the benefits of Handles: [Handles are the better pointers](https://floooh.github.io/2018/06/17/handles-vs-pointers.html)
+
+
+## Why fixed size?
+You might be thinking, why should I use fixed size datastructures, instead of letting them allocate memory dynamically? Odin has a great allocator system, but there are still reasons I find fixed-size nicer in 99% of cases.
+
+- it's good to be explicit about the limits because the code operating on the data has limits anyway, whether you acknowledge it or not.
+- prioritizes worst-case performance over the average case which is arguably much more important in general
+- it's very obvious when you're doing something that would use a LOT of memory, so you come up with a different way to manage the data. With dynamic memory it's much easier to use huge amounts of memory without realizing it.
+- no need to make and delete datastructures (if you wanted [dynamic] arrays with specific capacity for example)
+- it's trivial to do a "deep copy" of the entire datastructure. If you use only fixed-size datastructures and have a big `Global_Data` struct with all the program state, you can trivially serialize it, or pass it between modules when hotreloading.
+- pointers never get invalidated. That said, you still probably want to use indexes or handles
+- it's just a bit simpler than the alternatives
+
+There are definitely cases when fixed-size is not a very good fit, but in software like games it works _really_ well in my experience.
 
 ### Pool Example
 The Pool datastructure is probably the most useful to gamedevs, so here is a short example with practical usage:
@@ -56,24 +75,8 @@ game_draw :: proc(game: Game) {
 }
 ```
 
-## Handles
-Pool and Indirect_Array use Handles to address items. A handle is sort of like a unique ID, however it can optionally also have a "generation index". This is useful because IDs can be reused, but the generation index check makes sure you are accessing the item you _think_ you are. This prevents "use-after-removed" kinds of bugs.
-
-I recommend reading this blog post by Andre Weissflog to learn more about the benefits of Handles: [Handles are the better pointers](https://floooh.github.io/2018/06/17/handles-vs-pointers.html)
-
-
-## Why fixed size?
-You might be thinking, why should I use fixed size datastructures, instead of letting them allocate memory dynamically? Odin has a great allocator system, but there are still reasons I find fixed-size nicer in 99% of cases.
-
-- it's good to be explicit about the limits because the code operating on the data has limits anyway, whether you acknowledge it or not.
-- prioritizes worst-case performance over the average case which is arguably much more important in general
-- it's very obvious when you're doing something that would use a LOT of memory, so you come up with a different way to manage the data. With dynamic memory it's much easier to use huge amounts of memory without realizing it.
-- no need to make and delete datastructures (if you wanted [dynamic] arrays with specific capacity for example)
-- it's trivial to do a "deep copy" of the entire datastructure. If you use only fixed-size datastructures and have a big `Global_Data` struct with all the program state, you can trivially serialize it, or pass it between modules when hotreloading.
-- pointers never get invalidated. That said, you still probably want to use indexes or handles
-- it's just a bit simpler than the alternatives
-
-There are definitely cases when fixed-size is not a very good fit, but in software like games it works _really_ well in my experience.
+## Demo
+The `demo` package is a little testing program, currently only for very simple coverage tests. Run with `odin run demo` from this project's root directory.
 
 ## Contributing
 Improvements and bugfix PRs are welcome. If you want to add a new datastructure or a big feature like that I recommend opening an issue first.

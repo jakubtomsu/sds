@@ -3,11 +3,16 @@ package sds
 import "base:builtin"
 import "base:runtime"
 
-// Static equivalent of [dynamic]T array
-// based on core:container/small_array
+/*
+Static array with dynamic length
+
+Based on core:container/small_array.
+Usage is similar to `[dynamic]T`
+*/
 Array :: struct($N: i32, $T: typeid) where N >= 0 {
-    data: [N]T `fmt:"len"`,
-    len:  i32,
+    data:          [N]T,
+    invalid_value: T,
+    len:           i32,
 }
 
 @(require_results)
@@ -21,18 +26,34 @@ array_slice :: #force_inline proc "contextless" (a: ^$A/Array($N, $T)) -> []T {
 }
 
 @(require_results)
-array_get :: #force_inline proc(a: $A/Array($N, $T), #any_int index: int, loc := #caller_location) -> T {
+array_get :: #force_inline proc "contextless" (a: $A/Array($N, $T), #any_int index: int, loc := #caller_location) -> T {
     runtime.bounds_check_error_loc(loc, index, int(a.len))
     return a.data[index]
 }
 
 @(require_results)
-array_get_ptr :: #force_inline proc(a: ^$A/Array($N, $T), #any_int index: int, loc := #caller_location) -> ^T {
+array_get_safe :: proc "contextless" (a: $A/Array($N, $T), #any_int index: int) -> (T, bool) #optional_ok {
+    if index < 0 || index >= int(a.len) {
+        return {}, false
+    }
+    return a.data[index], true
+}
+
+@(require_results)
+array_get_ptr :: #force_inline proc "contextless" (a: ^$A/Array($N, $T), #any_int index: int, loc := #caller_location) -> ^T {
     runtime.bounds_check_error_loc(loc, index, int(a.len))
     return &a.data[index]
 }
 
-array_set :: #force_inline proc(a: ^$A/Array($N, $T), #any_int index: int, value: T, loc := #caller_location) {
+@(require_results)
+array_get_ptr_safe :: proc "contextless" (a: ^$A/Array($N, $T), #any_int index: int) -> (^T, bool) #optional_ok {
+    if index < 0 || index >= int(a.len) {
+        return &a.invalid_value, false
+    }
+    return &a.data[index], true
+}
+
+array_set :: #force_inline proc "contextless" (a: ^$A/Array($N, $T), #any_int index: int, value: T, loc := #caller_location) {
     runtime.bounds_check_error_loc(loc, index, int(a.len))
     a.data[index] = value
 }
@@ -45,45 +66,36 @@ array_set_safe :: proc "contextless" (a: ^$A/Array($N, $T), #any_int index: int,
     return true
 }
 
-@(require_results)
-array_get_safe :: proc "contextless" (a: $A/Array($N, $T), #any_int index: int) -> (T, bool) #optional_ok {
-    if index < 0 || index >= int(a.len) {
-        return {}, false
-    }
-    return a.data[index], true
-}
-
-@(require_results)
-array_get_ptr_safe :: proc "contextless" (a: ^$A/Array($N, $T), #any_int index: int) -> (^T, bool) #optional_ok {
-    if index < 0 || index >= int(a.len) {
-        return {}, false
-    }
-    return &a.data[index], true
-}
-
 // Returns index of the appended value
-array_append :: proc(a: ^$A/Array($N, $T), item: T, loc := #caller_location) -> int {
-    assert(a.len < i32(N), "Reached the array size limit", loc)
+array_append :: proc "contextless" (a: ^$A/Array($N, $T), item: T, loc := #caller_location) -> int {
+    assert_contextless(a.len < i32(N), "Reached the array size limit", loc)
     index := a.len
     a.data[index] = item
     a.len += 1
     return int(index)
 }
 
-array_append_safe :: proc "contextless" (a: ^$A/Array($N, $T), item: T) -> (int, bool) #optional_ok {
+array_append_safe :: proc "contextless" (a: ^$A/Array($N, $T), item: T) -> (index: int, ok: bool) #optional_ok {
+    index = array_append_empty(a) or_return
+    a.data[index] = item
+    return index, true
+}
+
+// Warning: doesn't clear previous value!
+@(require_results)
+array_append_empty :: proc "contextless" (a: ^$A/Array($N, $T)) -> (index: int, ok: bool) #optional_ok {
     if a.len >= N {
         return 0, false
     }
-    index := a.len
-    a.data[index] = item
+    index = int(a.len)
     a.len += 1
-    return int(index), true
+    return index, true
 }
 
-array_append_elems :: proc(a: ^$A/Array($N, $T), elems: ..T, loc := #caller_location) {
+array_append_elems :: proc "contextless" (a: ^$A/Array($N, $T), elems: ..T, loc := #caller_location) {
     n := copy(a.data[a.len:], elems[:])
     a.len += i32(n)
-    assert(n == len(elems), loc = loc)
+    assert_contextless(n == len(elems), "Not enough space in the array", loc)
 }
 
 array_append_elems_safe :: proc "contextless" (a: ^$A/Array($N, $T), elems: ..T) -> bool {
@@ -94,8 +106,8 @@ array_append_elems_safe :: proc "contextless" (a: ^$A/Array($N, $T), elems: ..T)
 
 
 @(require_results)
-array_pop_back :: proc(a: ^$A/Array($N, $T), loc := #caller_location) -> T {
-    assert(a.len > 0, loc = loc)
+array_pop_back :: proc "contextless" (a: ^$A/Array($N, $T), loc := #caller_location) -> T {
+    assert_contextless(a.len > 0, "Array is empty", loc)
     item := a.data[a.len - 1]
     a.len -= 1
     return item

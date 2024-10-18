@@ -8,7 +8,7 @@ main :: proc() {
     // because polymorphic procs get instantiated and checked only when used.
     // Otherwise it's easy to miss dumb compile errors and typos.
     {
-        ds: sds.Array(69, f32)
+        ds: sds.Array(8, f32)
         sds.array_append(&ds, 123.0)
         sds.array_append_elems(&ds, 123.0, 213)
         sds.array_append_safe(&ds, 3)
@@ -32,7 +32,7 @@ main :: proc() {
         _ = sds.soa_array_get(ds, 1)
         _ = sds.soa_array_get_safe(ds, 3213)
         _ = sds.soa_array_get_ptr(&ds, 1)
-        _ = sds.soa_array_get_ptr_safe(&ds, 3213)
+        _, _ = sds.soa_array_get_ptr_safe(&ds, 3213)
         sds.soa_array_set(&ds, 0, 6.2)
         sds.soa_array_set_safe(&ds, 6, 6.3)
         _ = sds.soa_array_has_index(ds, 9)
@@ -87,6 +87,22 @@ main :: proc() {
         _, _, _ = sds.pool_index_get_ptr_safe(&ds, 3)
         _, _, _ = sds.pool_index_get_safe(ds, 3)
         sds.pool_remove(&ds, first)
+    }
+
+    {
+        Handle :: sds.Handle(u16, u16)
+        ds: sds.Indirect_Array(1024, f32, Handle)
+        first := sds.indirect_array_append(&ds, 1.23)
+        _ = sds.indirect_array_slice(&ds)
+        sds.indirect_array_set(&ds, first, 10)
+        sds.indirect_array_set_safe(&ds, Handle{}, 120)
+        _ = sds.indirect_array_get(ds, first)
+        _ = sds.indirect_array_get_safe(ds, Handle{})
+        _ = sds.indirect_array_get_ptr(&ds, first)
+        _ = sds.indirect_array_get_ptr_safe(&ds, Handle{})
+        assert(sds.indirect_array_has_handle(ds, first))
+        assert(sds.indirect_array_has_index(ds, 0))
+        sds.indirect_array_remove(&ds, first)
     }
 
     fmt.println("Done!")
