@@ -76,5 +76,7 @@ You might be thinking, why should I use fixed size datastructures, instead of le
 
 There are definitely cases when fixed-size is not a very good fit, but in software like games it works _really_ well in my experience.
 
+I also recommend reading the [TigerBeetle database coding style](https://github.com/tigerbeetle/tigerbeetle/blob/main/docs/TIGER_STYLE.md), which also heavily relies on static memory allocation.
+
 ## Contributing
 Improvements and bugfix PRs are welcome. If you want to add a new datastructure or a big feature like that I recommend opening an issue first.
