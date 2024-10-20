@@ -22,10 +22,14 @@ main :: proc() {
         _ = sds.array_has_index(ds, 9)
         _ = sds.array_pop_back(&ds)
         _ = sds.array_pop_back_safe(&ds)
+        sds.array_remove(&ds, 0)
     }
 
     {
         ds: sds.Soa_Array(123, [2]f32)
+        sds.soa_array_append(&ds, 123.0)
+        sds.soa_array_append(&ds, 123.0)
+        sds.soa_array_append(&ds, 123.0)
         sds.soa_array_append(&ds, 123.0)
         sds.soa_array_append_safe(&ds, 3)
         _ = sds.soa_array_slice(&ds)
@@ -38,6 +42,7 @@ main :: proc() {
         _ = sds.soa_array_has_index(ds, 9)
         _ = sds.soa_array_pop_back(&ds)
         _ = sds.soa_array_pop_back_safe(&ds)
+        sds.soa_array_remove(&ds, 0)
     }
 
     {

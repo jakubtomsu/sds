@@ -108,7 +108,7 @@ soa_array_pop_back_safe :: proc "contextless" (a: ^$A/Soa_Array($N, $T)) -> (ele
 soa_array_remove :: proc "contextless" (a: ^$A/Soa_Array($N, $T), #any_int index: int, loc := #caller_location) {
     runtime.bounds_check_error_loc(loc, index, int(a.len))
     n := a.len - 1
-    if index != n {
+    if index != int(n) {
         a.data[index] = a.data[n]
     }
     a.len -= 1

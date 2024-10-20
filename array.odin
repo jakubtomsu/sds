@@ -124,9 +124,9 @@ array_pop_back_safe :: proc "contextless" (a: ^$A/Array($N, $T)) -> (item: T, ok
 }
 
 array_remove :: proc "contextless" (a: ^$A/Array($N, $T), #any_int index: int, loc := #caller_location) {
-    runtime.bounds_check_error_loc(loc, index, a.len)
+    runtime.bounds_check_error_loc(loc, index, int(a.len))
     n := a.len - 1
-    if index != n {
+    if index != int(n) {
         a.data[index] = a.data[n]
     }
     a.len -= 1
