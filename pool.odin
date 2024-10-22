@@ -161,7 +161,7 @@ pool_index_get_safe :: proc "contextless" (p: $T/Pool($N, $V, $H), #any_int inde
 @(require_results)
 pool_index_get_ptr_safe :: proc "contextless" (p: ^$T/Pool($N, $V, $H), #any_int index: int) -> (^V, H, bool) {
     if !pool_has_index(p^, index) {
-        return {}, {}, false
+        return &p.data[0], {}, false
     }
 
     return &p.data[index], {auto_cast index, p.gen_indexes[index].gen}, true
