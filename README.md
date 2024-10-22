@@ -1,5 +1,5 @@
 # 💾 Static Data Sructures
-A small Odin library with useful fixed-size data structures. This means all of the data uses just static arrays (`[N]T`), no dynamic allocations whatsoever.
+A small Odin library with useful fixed-size data structures. This means all of the data is internally stored just as static arrays (`[N]T`), no dynamic allocations whatsoever.
 
 [Why fixed size?](#why-fixed-size)
 
