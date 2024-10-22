@@ -82,6 +82,12 @@ append_elems_safe :: proc {
     array_append_elems_safe,
 }
 
+append_empty :: proc {
+	array_append_empty,
+	soa_array_append_empty,
+	pool_append_empty,
+}
+
 pop_back :: proc {
     array_pop_back,
     soa_array_pop_back,
