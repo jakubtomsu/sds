@@ -16,9 +16,6 @@ Bit_Array | bit_set for >128 element support | Array of booleans stored as singl
 
 All of the datastructures follow ZII - zero is initialization. So you don't need to ever call any `_init/_make` procs. There is also always a "dummy" invalid value which is returned in case `*_get_ptr` procs fail.
 
-> [!TIP]
-> if you only need one particular datastructure, you should be able to just take that one particular odin file and put it directly in your project. This might be more conventient for smaller programs.
-
 > [!NOTE]
 > Some very basic procedures like `len`, `cap`, `resize` etc are intentionally missing for simplicity.
 > Don't be afraid to just directly read the member values like `len` from the structs.
