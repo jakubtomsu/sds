@@ -9,7 +9,6 @@ Name | Similar To | Info
 Array | `[dynamic]T` or `core:container/small_array` | Regular static array with dynamic number of elements (`[N]T` + `int` for length)
 Soa_Array | `#soa[dynamic]T` | Variant of `Array` with `#soa` backing buffer
 Pool | none |  A sparse array, which uses [Handles](#handles) to refer to elements. Deleted elements are kept in a free list. All operations are O(1). Overhead is one index and one generation counter per item.
-Indirect_Array | `map[Handle]T` | Uses a Pool to remap Handles into a regular linear array of values. All operations are O(1). Overhead is two indexes and one generation counter per item.
 Queue | core:container/queue | A simple ring-buffer based queue.
 Bit_Array | bit_set for >128 element support | Array of booleans stored as single bits. This can be useful in cases where `bit_set` is too small (>128 elements).
 
@@ -58,7 +57,7 @@ game_draw :: proc(game: Game) {
 ```
 
 ## Handles
-Pool and Indirect_Array use Handles to address items. A handle is sort of like a unique ID, however it can optionally also have a "generation index". This is useful because IDs can be reused, but the generation index check makes sure you are accessing the item you _think_ you are. This prevents "use-after-removed" kinds of bugs.
+Pool uses Handles to address items. A handle is sort of like a unique ID, however it can optionally also have a "generation index". This is useful because IDs can be reused, but the generation index check makes sure you are accessing the item you _think_ you are. This prevents "use-after-removed" kinds of bugs.
 
 I recommend reading this blog post by Andre Weissflog to learn more about the benefits of Handles: [Handles are the better pointers](https://floooh.github.io/2018/06/17/handles-vs-pointers.html)
 

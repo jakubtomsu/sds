@@ -94,21 +94,5 @@ main :: proc() {
         sds.pool_remove(&ds, first)
     }
 
-    {
-        Handle :: sds.Handle(u16, u16)
-        ds: sds.Indirect_Array(1024, f32, Handle)
-        first := sds.indirect_array_append(&ds, 1.23)
-        _ = sds.indirect_array_slice(&ds)
-        sds.indirect_array_set(&ds, first, 10)
-        sds.indirect_array_set_safe(&ds, Handle{}, 120)
-        _ = sds.indirect_array_get(ds, first)
-        _ = sds.indirect_array_get_safe(ds, Handle{})
-        _ = sds.indirect_array_get_ptr(&ds, first)
-        _ = sds.indirect_array_get_ptr_safe(&ds, Handle{})
-        assert(sds.indirect_array_has_handle(ds, first))
-        assert(sds.indirect_array_has_index(ds, 0))
-        sds.indirect_array_remove(&ds, first)
-    }
-
     fmt.println("Done!")
 }
