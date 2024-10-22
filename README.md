@@ -12,6 +12,8 @@ Pool | none |  A sparse array, which uses [Handles](#handles) to refer to elemen
 Queue | core:container/queue | A simple ring-buffer based queue.
 Bit_Array | bit_set for >128 element support | Array of booleans stored as single bits. This can be useful in cases where `bit_set` is too small (>128 elements).
 
+> Note: There used to be an Indirect_Array which remaps sparse handles to linear array using a pool. It was removed in commit d381140 because a pool pretty much covers all the use cases in practice.
+
 All of the datastructures follow ZII - zero is initialization. So you don't need to ever call any `_init/_make` procs. There is also always a "dummy" invalid value which is returned in case `*_get_ptr` procs fail.
 
 > [!TIP]
