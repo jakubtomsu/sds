@@ -8,8 +8,8 @@ SOA Array - (almost) fully compatible variant of Array
 Note: in this particular case it's not possible to store an invalid value like in all other datastructures,
 due to the way SOA pointers work. So a pointer to data[0] is returned instead and get_ptr_safe is _not_ #optional_ok.
 */
-Soa_Array :: struct($N: i32, $T: typeid) where N >= 0 {
-    data:          #soa[N]T,
+Soa_Array :: struct($Num: i32, $Val: typeid) where Num >= 0 {
+    data:          #soa[Num]Val,
     len:           i32,
 }
 

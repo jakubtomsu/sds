@@ -9,10 +9,10 @@ Static array with dynamic length
 Based on core:container/small_array.
 Usage is similar to `[dynamic]T`
 */
-Array :: struct($N: i32, $T: typeid) where N >= 0 {
-    data:          [N]T,
-    invalid_value: T,
+Array :: struct($Num: i32, $Val: typeid) where Num >= 0 {
+    data:          [Num]Val,
     len:           i32,
+    invalid_value: Val,
 }
 
 @(require_results)

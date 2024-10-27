@@ -21,8 +21,7 @@ BIT_ARRAY_SHIFT :: 6
 @(require_results)
 bit_array_get :: proc "contextless" (a: $T/Bit_Array($B), #any_int bit_index: int, loc := #caller_location) -> bool {
     runtime.bounds_check_error_loc(loc, bit_index, B)
-    val := u64(1 << u64(bit_index))
-    return (a.data[bit_index >> BIT_ARRAY_SHIFT] & val) == val
+    return (a.data[bit_index >> BIT_ARRAY_SHIFT] & u64(1 << u64(bit_index))) != 0
 }
 
 bit_array_set_true :: proc "contextless" (a: ^$T/Bit_Array($B), #any_int bit_index: int, loc := #caller_location) {
@@ -32,7 +31,7 @@ bit_array_set_true :: proc "contextless" (a: ^$T/Bit_Array($B), #any_int bit_ind
 
 bit_array_set_false :: proc "contextless" (a: ^$T/Bit_Array($B), #any_int bit_index: int, loc := #caller_location) {
     runtime.bounds_check_error_loc(loc, bit_index, B)
-    a.data[bit_index >> BIT_ARRAY_SHIFT] &= ~(u64(bit_index) & BIT_ARRAY_MASK)
+    a.data[bit_index >> BIT_ARRAY_SHIFT] &= ~(1 << (u64(bit_index) & BIT_ARRAY_MASK))
 }
 
 bit_array_set :: proc "contextless" (a: ^$T/Bit_Array($B), #any_int bit_index: int, value: bool, loc := #caller_location) {
