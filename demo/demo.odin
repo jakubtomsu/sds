@@ -2,6 +2,7 @@ package sds_demo
 
 import sds ".."
 import "core:fmt"
+import "core:thread"
 
 main :: proc() {
     // This stupid "coverage test" exists just to force the compiler to compile every procedure,
@@ -9,9 +10,9 @@ main :: proc() {
     // Otherwise it's easy to miss dumb compile errors and typos.
     {
         ds: sds.Array(8, f32)
-        sds.array_append(&ds, 123.0)
-        sds.array_append_elems(&ds, 123.0, 213)
-        sds.array_append_safe(&ds, 3)
+        sds.array_push(&ds, 123.0)
+        sds.array_push_elems(&ds, 123.0, 213)
+        sds.array_push_safe(&ds, 3)
         _ = sds.array_slice(&ds)
         _ = sds.array_get(ds, 2)
         _ = sds.array_get_safe(ds, 3213)
@@ -27,11 +28,11 @@ main :: proc() {
 
     {
         ds: sds.Soa_Array(123, [2]f32)
-        sds.soa_array_append(&ds, 123.0)
-        sds.soa_array_append(&ds, 123.0)
-        sds.soa_array_append(&ds, 123.0)
-        sds.soa_array_append(&ds, 123.0)
-        sds.soa_array_append_safe(&ds, 3)
+        sds.soa_array_push(&ds, 123.0)
+        sds.soa_array_push(&ds, 123.0)
+        sds.soa_array_push(&ds, 123.0)
+        sds.soa_array_push(&ds, 123.0)
+        sds.soa_array_push_safe(&ds, 3)
         _ = sds.soa_array_slice(&ds)
         _ = sds.soa_array_get(ds, 1)
         _ = sds.soa_array_get_safe(ds, 3213)
@@ -79,7 +80,7 @@ main :: proc() {
         Handle :: sds.Handle(u16, u16)
         ds: sds.Pool(1024, f32, Handle)
         sds.pool_clear(&ds)
-        first := sds.pool_append(&ds, 1.234)
+        first := sds.pool_push(&ds, 1.234)
         _ = sds.pool_get(ds, first)
         _ = sds.pool_get_ptr(&ds, first)
         _ = sds.pool_get_safe(ds, Handle{823, 92})
