@@ -9,9 +9,9 @@ Name | Similar To | Info
 Array | `[dynamic]T` or `core:container/small_array` | Regular static array with dynamic number of elements (`[N]T` + `int` for length)
 Soa_Array | `#soa[dynamic]T` | Variant of `Array` with `#soa` backing buffer
 Pool | none |  A sparse array, which uses [Handles](#handles) to refer to elements. Deleted elements are kept in a free list. All operations are O(1). Overhead is one index and one generation counter per item.
-Queue | core:container/queue | A simple ring-buffer based queue.
+Queue | core:container/queue | A simple ring buffer queue.
 Bit_Array | bit_set for >128 element support | Array of booleans stored as single bits. This can be useful in cases where `bit_set` is too small (>128 elements).
-SPSC | Single-Producer Single-Consumer Lock-Free Queue | Ring Buffer Queue
+SPSC | Queue | Single-producer single-consumer lock-free ring buffer queue for multithreaded systems.
 
 > Note: There used to be an Indirect_Array which remaps sparse handles to linear array using a pool. It was removed in commit [d381140](https://github.com/jakubtomsu/sds/commit/d3811401c59c02e3cf960c95229a85557e398276) because a pool pretty much covers all the use cases in practice.
 
