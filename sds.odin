@@ -68,6 +68,7 @@ push :: proc {
     soa_array_push,
     pool_push,
     queue_push_back,
+    spsc_push,
 }
 
 push_safe :: proc {
@@ -76,6 +77,7 @@ push_safe :: proc {
 
 push_elems :: proc {
     array_push_elems,
+    spsc_push_elems,
 }
 
 push_elems_safe :: proc {
@@ -88,13 +90,18 @@ push_empty :: proc {
 	pool_push_empty,
 }
 
-pop_back :: proc {
+pop :: proc {
     array_pop_back,
     soa_array_pop_back,
     queue_pop_back,
+    spsc_pop,
 }
 
-pop_back_safe :: proc {
+pop_elems :: proc {
+    spsc_pop_elems,
+}
+
+pop_safe :: proc {
     array_pop_back_safe,
     soa_array_pop_back_safe,
     queue_pop_back_safe,
