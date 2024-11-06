@@ -58,7 +58,7 @@ SPSC :: struct($Num: u64, $Val: typeid) {
     data: [Num]Val,
 }
 
-spsc_push_elems :: proc(q: ^$T/SPSC($N, $V), vals: ..V) -> int {
+spsc_push_elems :: proc "contextless" (q: ^$T/SPSC($N, $V), vals: ..V) -> int {
     vals := vals
     old_producer_head := q.producer_head
     consumer_tail := intrinsics.atomic_load_explicit(&q.consumer_tail, .Acquire)
@@ -76,7 +76,7 @@ spsc_push_elems :: proc(q: ^$T/SPSC($N, $V), vals: ..V) -> int {
     return len(vals)
 }
 
-spsc_pop_elems :: proc(q: ^$T/SPSC($N, $V), buf: []V) -> []V {
+spsc_pop_elems :: proc "contextless" (q: ^$T/SPSC($N, $V), buf: []V) -> []V {
     old_consumer_head := q.consumer_head
     producer_tail := intrinsics.atomic_load_explicit(&q.producer_tail, .Acquire)
     ready_entries := producer_tail - old_consumer_head
@@ -93,11 +93,11 @@ spsc_pop_elems :: proc(q: ^$T/SPSC($N, $V), buf: []V) -> []V {
     return result
 }
 
-spsc_push :: proc(q: ^$T/SPSC($N, $V), val: V) -> bool {
+spsc_push :: proc "contextless" (q: ^$T/SPSC($N, $V), val: V) -> bool {
     return 1 == #force_inline spsc_push_elems(q, val)
 }
 
-spsc_pop :: proc(q: ^$T/SPSC($N, $V)) -> (result: V, ok: bool) {
+spsc_pop :: proc "contextless" (q: ^$T/SPSC($N, $V)) -> (result: V, ok: bool) {
     res := #force_inline spsc_pop_elems(q, (cast([^]V)&result)[:1])
     return result, len(res) == 1
 }
