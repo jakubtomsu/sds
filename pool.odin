@@ -22,7 +22,7 @@ for i in 1..=my_pool.max_index {
 Note: the reason why this takes a Handle parameter instead of the Index and Gen directly is
 to better support distinct handle types, even in return values etc.
 */
-Pool :: struct($Num: int, $Val: typeid, $Handle: typeid) where Num > 0 {
+Pool :: struct($Num: int, $Val: typeid, $Handle: typeid) where Num > 0{
     max_index:   i32,
     first_free:  i32,
     // Indexes:
@@ -41,7 +41,7 @@ pool_clear :: proc "contextless" (p: ^$T/Pool($N, $V, $H)) {
 
 // Warning: doesn't clear previous value!
 @(require_results)
-pool_append_empty :: proc "contextless" (p: ^$T/Pool($N, $V, $H), loc := #caller_location) -> (handle: H, ok: bool) #optional_ok {
+pool_push_empty :: proc "contextless" (p: ^$T/Pool($N, $V, $H), loc := #caller_location) -> (handle: H, ok: bool) #optional_ok {
     index := p.first_free
 
     // Eclude zero index!
@@ -49,7 +49,7 @@ pool_append_empty :: proc "contextless" (p: ^$T/Pool($N, $V, $H), loc := #caller
         // get slot from the free list
         p.first_free = auto_cast p.gen_indexes[index].index
     } else {
-        // append to the end
+        // push to the end
         if p.max_index < 0 || int(p.max_index) >= N - 1 {
             return {}, false
         }
@@ -62,8 +62,8 @@ pool_append_empty :: proc "contextless" (p: ^$T/Pool($N, $V, $H), loc := #caller
     return {index = auto_cast index, gen = p.gen_indexes[index].gen}, true
 }
 
-pool_append :: proc "contextless" (p: ^$T/Pool($N, $V, $H), value: V, loc := #caller_location) -> (handle: H, ok: bool) #optional_ok {
-    handle = pool_append_empty(p, loc) or_return
+pool_push :: proc "contextless" (p: ^$T/Pool($N, $V, $H), value: V, loc := #caller_location) -> (handle: H, ok: bool) #optional_ok {
+    handle = pool_push_empty(p, loc) or_return
     p.data[handle.index] = value
     return handle, true
 }

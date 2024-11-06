@@ -66,8 +66,8 @@ array_set_safe :: proc "contextless" (a: ^$A/Array($N, $T), #any_int index: int,
     return true
 }
 
-// Returns index of the appended value
-array_append :: proc "contextless" (a: ^$A/Array($N, $T), item: T, loc := #caller_location) -> int {
+// Returns index of the pushed value
+array_push :: proc "contextless" (a: ^$A/Array($N, $T), item: T, loc := #caller_location) -> int {
     assert_contextless(a.len < i32(N), "Reached the array size limit", loc)
     index := a.len
     a.data[index] = item
@@ -75,15 +75,15 @@ array_append :: proc "contextless" (a: ^$A/Array($N, $T), item: T, loc := #calle
     return int(index)
 }
 
-array_append_safe :: proc "contextless" (a: ^$A/Array($N, $T), item: T) -> (index: int, ok: bool) #optional_ok {
-    index = array_append_empty(a) or_return
+array_push_safe :: proc "contextless" (a: ^$A/Array($N, $T), item: T) -> (index: int, ok: bool) #optional_ok {
+    index = array_push_empty(a) or_return
     a.data[index] = item
     return index, true
 }
 
 // Warning: doesn't clear previous value!
 @(require_results)
-array_append_empty :: proc "contextless" (a: ^$A/Array($N, $T)) -> (index: int, ok: bool) #optional_ok {
+array_push_empty :: proc "contextless" (a: ^$A/Array($N, $T)) -> (index: int, ok: bool) #optional_ok {
     if a.len >= N {
         return 0, false
     }
@@ -92,13 +92,13 @@ array_append_empty :: proc "contextless" (a: ^$A/Array($N, $T)) -> (index: int, 
     return index, true
 }
 
-array_append_elems :: proc "contextless" (a: ^$A/Array($N, $T), elems: ..T, loc := #caller_location) {
+array_push_elems :: proc "contextless" (a: ^$A/Array($N, $T), elems: ..T, loc := #caller_location) {
     n := copy(a.data[a.len:], elems[:])
     a.len += i32(n)
     assert_contextless(n == len(elems), "Not enough space in the array", loc)
 }
 
-array_append_elems_safe :: proc "contextless" (a: ^$A/Array($N, $T), elems: ..T) -> bool {
+array_push_elems_safe :: proc "contextless" (a: ^$A/Array($N, $T), elems: ..T) -> bool {
     n := copy(a.data[a.len:], elems[:])
     a.len += n
     return n == len(elems)
@@ -130,4 +130,9 @@ array_remove :: proc "contextless" (a: ^$A/Array($N, $T), #any_int index: int, l
         a.data[index] = a.data[n]
     }
     a.len -= 1
+}
+
+array_from_slice :: proc "contextless" (a: ^$A/Array($N, $T), data: []T) -> bool {
+    a.len = cast(i32)copy(a.data[:], data)
+    return int(a.len) == len(data)
 }

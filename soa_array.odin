@@ -65,7 +65,7 @@ soa_array_set_safe :: proc "contextless" (a: ^$A/Soa_Array($N, $T), #any_int ind
     return true
 }
 
-soa_array_append :: proc (a: ^$A/Soa_Array($N, $T), elem: T, loc := #caller_location) -> (index: int) {
+soa_array_push :: proc (a: ^$A/Soa_Array($N, $T), elem: T, loc := #caller_location) -> (index: int) {
     assert_contextless(a.len < i32(N), "Reached the array size limit", loc)
     index = int(a.len)
     a.data[index] = elem
@@ -73,14 +73,14 @@ soa_array_append :: proc (a: ^$A/Soa_Array($N, $T), elem: T, loc := #caller_loca
     return index
 }
 
-soa_array_append_safe :: proc "contextless" (a: ^$A/Soa_Array($N, $T), elem: T) -> (index: int, ok: bool) #optional_ok {
-    index = soa_array_append_empty(a) or_return
+soa_array_push_safe :: proc "contextless" (a: ^$A/Soa_Array($N, $T), elem: T) -> (index: int, ok: bool) #optional_ok {
+    index = soa_array_push_empty(a) or_return
     a.data[index] = elem
     return index, true
 }
 
 @(require_results)
-soa_array_append_empty :: proc "contextless" (a: ^$A/Soa_Array($N, $T)) -> (index: int, ok: bool) #optional_ok {
+soa_array_push_empty :: proc "contextless" (a: ^$A/Soa_Array($N, $T)) -> (index: int, ok: bool) #optional_ok {
     if a.len >= N {
         return 0, false
     }

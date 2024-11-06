@@ -63,29 +63,29 @@ has_handle :: proc {
     pool_has_handle,
 }
 
-append :: proc {
-    array_append,
-    soa_array_append,
-    pool_append,
+push :: proc {
+    array_push,
+    soa_array_push,
+    pool_push,
     queue_push_back,
 }
 
-append_safe :: proc {
-    array_append_safe,
+push_safe :: proc {
+    array_push_safe,
 }
 
-append_elems :: proc {
-    array_append_elems,
+push_elems :: proc {
+    array_push_elems,
 }
 
-append_elems_safe :: proc {
-    array_append_elems_safe,
+push_elems_safe :: proc {
+    array_push_elems_safe,
 }
 
-append_empty :: proc {
-	array_append_empty,
-	soa_array_append_empty,
-	pool_append_empty,
+push_empty :: proc {
+	array_push_empty,
+	soa_array_push_empty,
+	pool_push_empty,
 }
 
 pop_back :: proc {
