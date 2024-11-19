@@ -22,7 +22,7 @@ All of the datastructures follow ZII - zero is initialization. So you don't need
 > Don't be afraid to just directly read the member values like `len` from the structs.
 
 ### Pool Example
-The Pool datastructure is probably the most useful to gamedevs, so here is a short example with practical usage:
+The Pool datastructure is probably the most useful to gamedevs, so here is a short example of practical usage:
 ```odin
 import "sds"
 
