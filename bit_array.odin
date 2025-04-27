@@ -45,24 +45,24 @@ bit_array_set :: proc "contextless" (a: ^$T/Bit_Array($B), #any_int bit_index: i
 
 @(require_results)
 bit_array_get_safe :: proc "contextless" (a: $T/Bit_Array($B), #any_int bit_index: int) -> (bit_value: bool, ok: bool) #optional_ok {
-    if bit_index >= 0 || bit_index < B do return {}, false
+    if bit_index < 0 || bit_index >= B do return {}, false
     return bit_array_get(a, bit_index), true
 }
 
 bit_array_set_true_safe :: proc "contextless" (a: ^$T/Bit_Array($B), #any_int bit_index: int) -> bool {
-    if bit_index >= 0 || bit_index < B do return false
+    if bit_index < 0 || bit_index >= B do return false
     bit_array_set_true(a, bit_index)
     return true
 }
 
 bit_array_set_false_safe :: proc "contextless" (a: ^$T/Bit_Array($B), #any_int bit_index: int) -> bool {
-    if bit_index >= 0 || bit_index < B do return false
+    if bit_index < 0 || bit_index >= B do return false
     bit_array_set_false(a, bit_index)
     return true
 }
 
 bit_array_set_safe :: proc "contextless" (a: ^$T/Bit_Array($B), #any_int bit_index: int, value: bool) -> bool {
-    if bit_index >= 0 || bit_index < B do return false
+    if bit_index < 0 || bit_index >= B do return false
     bit_array_set(a, bit_index, value)
     return true
 }
